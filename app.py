@@ -4,20 +4,50 @@ import numpy as np
 import requests
 from scipy.stats import poisson
 
-st.set_page_config(page_title="Plataforma de Análise Desportiva", layout="wide")
+st.set_page_config(page_title="Plataforma de Análise Desportiva 2026/2027", layout="wide")
 
-st.title("⚽ Plataforma Profissional de Análise Desportiva")
+st.title("⚽ Plataforma Profissional de Análise Desportiva (Época 2026/2027)")
 st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
 
-# --- DICIONÁRIO DE LIGAS ---
+# --- DICIONÁRIO DE LIGAS (Época 2026/2027: pasta 2627) ---
 LEAGUES = {
-    "🇵🇹 Liga Portugal": {"url": "https://www.football-data.co.uk/mmz4281/2425/P1.csv", "api_key": "soccer_portugal_primeira_liga"},
-    "🇪🇸 La Liga (Espanha)": {"url": "https://www.football-data.co.uk/mmz4281/2425/SP1.csv", "api_key": "soccer_spain_la_liga"},
-    "🇮🇹 Serie A (Itália)": {"url": "https://www.football-data.co.uk/mmz4281/2425/I1.csv", "api_key": "soccer_italy_serie_a"},
-    "🇬🇧 Premier League (Inglaterra)": {"url": "https://www.football-data.co.uk/mmz4281/2425/E0.csv", "api_key": "soccer_epl"},
-    "🇧🇷 Brasileirão (Série A)": {"url": "https://www.football-data.co.uk/new/BRA.csv", "api_key": "soccer_brazil_campeonato"},
-    "🇪🇺 UEFA Champions League": {"url": "https://www.football-data.co.uk/mmz4281/2425/CL.csv", "api_key": "soccer_uefa_champs_league", "is_europe": True},
-    "🇪🇺 UEFA Europa League": {"url": "https://www.football-data.co.uk/mmz4281/2425/EL.csv", "api_key": "soccer_uefa_europa_league", "is_europe": True}
+    "🇵🇹 Liga Portugal": {
+        "url": "https://www.football-data.co.uk/mmz4281/2627/P1.csv",
+        "url_prev": "https://www.football-data.co.uk/mmz4281/2526/P1.csv",
+        "api_key": "soccer_portugal_primeira_liga"
+    },
+    "🇪🇸 La Liga (Espanha)": {
+        "url": "https://www.football-data.co.uk/mmz4281/2627/SP1.csv",
+        "url_prev": "https://www.football-data.co.uk/mmz4281/2526/SP1.csv",
+        "api_key": "soccer_spain_la_liga"
+    },
+    "🇮🇹 Serie A (Itália)": {
+        "url": "https://www.football-data.co.uk/mmz4281/2627/I1.csv",
+        "url_prev": "https://www.football-data.co.uk/mmz4281/2526/I1.csv",
+        "api_key": "soccer_italy_serie_a"
+    },
+    "🇬🇧 Premier League (Inglaterra)": {
+        "url": "https://www.football-data.co.uk/mmz4281/2627/E0.csv",
+        "url_prev": "https://www.football-data.co.uk/mmz4281/2526/E0.csv",
+        "api_key": "soccer_epl"
+    },
+    "🇧🇷 Brasileirão (Série A)": {
+        "url": "https://www.football-data.co.uk/new/BRA.csv",
+        "url_prev": "https://www.football-data.co.uk/new/BRA.csv",
+        "api_key": "soccer_brazil_campeonato"
+    },
+    "🇪🇺 UEFA Champions League": {
+        "url": "https://www.football-data.co.uk/mmz4281/2627/CL.csv",
+        "url_prev": "https://www.football-data.co.uk/mmz4281/2526/CL.csv",
+        "api_key": "soccer_uefa_champs_league",
+        "is_europe": True
+    },
+    "🇪🇺 UEFA Europa League": {
+        "url": "https://www.football-data.co.uk/mmz4281/2627/EL.csv",
+        "url_prev": "https://www.football-data.co.uk/mmz4281/2526/EL.csv",
+        "api_key": "soccer_uefa_europa_league",
+        "is_europe": True
+    }
 }
 
 # --- SIDEBAR: CONFIGURAÇÕES E API KEY ---
@@ -51,10 +81,11 @@ live_data = fetch_live_odds(api_key, selected_league["api_key"])
 def generate_mock_european_data(is_champions=True):
     teams = [
         "Real Madrid", "Manchester City", "Bayern Munich", "PSG", "Barcelona", 
-        "Arsenal", "Inter", "Atletico Madrid", "Benfica", "Sporting CP", "FC Porto", "Dortmund"
+        "Arsenal", "Inter", "Atletico Madrid", "Benfica", "Sporting CP", "FC Porto", "Dortmund",
+        "Leverkusen", "Juventus", "Atalanta", "Milan", "Aston Villa", "Lille"
     ] if is_champions else [
         "Roma", "Lazio", "Manchester United", "Tottenham", "Porto", 
-        "Athletic Bilbao", "Real Sociedad", "Lyon", "Ajax", "Eintracht Frankfurt"
+        "Athletic Bilbao", "Real Sociedad", "Lyon", "Ajax", "Eintracht Frankfurt", "Nice", "AZ Alkmaar"
     ]
     
     data = []
@@ -72,10 +103,11 @@ def generate_mock_european_data(is_champions=True):
                 })
     return pd.DataFrame(data)
 
-# --- CARREGAR DADOS HISTÓRICOS ---
+# --- CARREGAR DADOS HISTÓRICOS E LISTA COMPLETA DE EQUIPAS ---
 @st.cache_data
 def load_league_data(league_info):
     url = league_info["url"]
+    url_prev = league_info.get("url_prev", url)
     is_brazil = "Brasileirão" in selected_league_name
     is_europe = league_info.get("is_europe", False)
     
@@ -91,7 +123,6 @@ def load_league_data(league_info):
 
     try:
         df = pd.read_csv(url)
-        
         if is_brazil:
             if 'Season' in df.columns:
                 max_season = df['Season'].max()
@@ -103,11 +134,19 @@ def load_league_data(league_info):
         cols_needed = ['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
         if 'HC' in df.columns and 'AC' in df.columns:
             cols_needed.extend(['HC', 'AC'])
+        
+        # Se a época atual ainda tiver poucos jogos, junta dados da época anterior
+        if len(df) < 50:
+            try:
+                df_prev = pd.read_csv(url_prev)
+                df = pd.concat([df_prev[cols_needed], df[cols_needed]], ignore_index=True)
+            except Exception:
+                pass
+
         return df[cols_needed].dropna()
     except Exception:
-        fallback_url = url.replace("2425", "2324")
         try:
-            df = pd.read_csv(fallback_url)
+            df = pd.read_csv(url_prev)
             cols_needed = ['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
             if 'HC' in df.columns and 'AC' in df.columns:
                 cols_needed.extend(['HC', 'AC'])
@@ -118,9 +157,6 @@ def load_league_data(league_info):
 df = load_league_data(selected_league)
 
 if df is not None and not df.empty:
-    if selected_league.get("is_europe"):
-        st.info("ℹ️ Competição Europeia selecionada: Base de dados carregada para análise estocástica e simulação.")
-
     teams = sorted(list(set(df['HomeTeam'].unique()).union(set(df['AwayTeam'].unique()))))
     
     col1, col2 = st.columns(2)
