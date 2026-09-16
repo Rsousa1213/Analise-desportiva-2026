@@ -39,44 +39,42 @@ st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.
 
 # --- DICIONÁRIO DE LIGAS (Época 2026/2027: pasta 2627) ---
 LEAGUES = {
-    "🇵🇹 Liga Portugal": {
+    "PT Liga Portugal": {
         "url": "https://www.football-data.co.uk/mmz4281/2627/P1.csv",
         "url_prev": "https://www.football-data.co.uk/mmz4281/2526/P1.csv",
         "api_key": "soccer_portugal_primeira_liga"
     },
-    "🇪🇸 La Liga (Espanha)": {
+    "ES La Liga (Espanha)": {
         "url": "https://www.football-data.co.uk/mmz4281/2627/SP1.csv",
         "url_prev": "https://www.football-data.co.uk/mmz4281/2526/SP1.csv",
         "api_key": "soccer_spain_la_liga"
     },
-    "🇮🇹 Serie A (Itália)": {
+    "IT Serie A (Itália)": {
         "url": "https://www.football-data.co.uk/mmz4281/2627/I1.csv",
         "url_prev": "https://www.football-data.co.uk/mmz4281/2526/I1.csv",
         "api_key": "soccer_italy_serie_a"
     },
-    "🇬🇧 Premier League (Inglaterra)": {
+    "GB Premier League (Inglaterra)": {
         "url": "https://www.football-data.co.uk/mmz4281/2627/E0.csv",
         "url_prev": "https://www.football-data.co.uk/mmz4281/2526/E0.csv",
         "api_key": "soccer_epl"
     },
-    "🇧🇷 Brasileirão (Série A)": {
-        "url": "https://www.football-data.co.uk/new/BRA.csv",
-        "url_prev": "https://www.football-data.co.uk/new/BRA.csv",
+    "BR Brasileirão Série A": {
+        "url": "https://www.football-data.co.uk/new_league_data/BRA.csv",
+        "url_prev": "https://www.football-data.co.uk/new_league_data/BRA.csv",
         "api_key": "soccer_brazil_campeonato"
     },
-    "🇪🇺 UEFA Champions League": {
-        "url": "https://www.football-data.co.uk/mmz4281/2627/CL.csv",
-        "url_prev": "https://www.football-data.co.uk/mmz4281/2526/CL.csv",
-        "api_key": "soccer_uefa_champs_league",
-        "is_europe": True
+    "EU Liga dos Campeões": {
+        "url": "https://www.football-data.co.uk/new_league_data/CL.csv",
+        "url_prev": "https://www.football-data.co.uk/new_league_data/CL.csv",
+        "api_key": "soccer_uefa_champs_league"
     },
-    "🇪🇺 UEFA Europa League": {
-        "url": "https://www.football-data.co.uk/mmz4281/2627/EL.csv",
-        "url_prev": "https://www.football-data.co.uk/mmz4281/2526/EL.csv",
-        "api_key": "soccer_uefa_europa_league",
-        "is_europe": True
-    }
-"NL Eerste Divisie (2ª Holanda)": {
+    "EU Liga Europa": {
+        "url": "https://www.football-data.co.uk/new_league_data/EL.csv",
+        "url_prev": "https://www.football-data.co.uk/new_league_data/EL.csv",
+        "api_key": "soccer_uefa_europa_league"
+    },
+    "NL Eerste Divisie (2ª Holanda)": {
         "url": "https://www.football-data.co.uk/mmz4281/2627/N1.csv",
         "url_prev": "https://www.football-data.co.uk/mmz4281/2526/N1.csv",
         "api_key": "soccer_netherlands_eerste_divisie"
@@ -85,7 +83,7 @@ LEAGUES = {
         "url": "https://www.football-data.co.uk/new_league_data/ARG.csv",
         "url_prev": "https://www.football-data.co.uk/new_league_data/ARG.csv",
         "api_key": "soccer_argentina_primera_division"
-    },
+    }
 }
 
 # --- SIDEBAR: CONFIGURAÇÕES E API KEY ---
