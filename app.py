@@ -190,44 +190,37 @@ def generate_mock_european_data(is_champions=True):
 @st.cache_data
 def load_league_data(league_info):
     url = league_info["url"]
-    
-    # 1. Trata competições europeias (UEFA)
-    if "new_league_data/CL.csv" in url or "new_league_data/EL.csv" in url:
+    url_prev = league_info.get("url_prev", url)
+
+    # 1. Trata competições europeias (UEFA) se o ficheiro remoto não existir
+    if "CL.csv" in url or "EL.csv" in url:
         try:
             df = pd.read_csv(url, encoding="latin1", on_bad_lines="skip")
             if df.empty or "HomeTeam" not in df.columns:
                 return generate_mock_european_data("CL.csv" in url)
             return df
-        except:
+        except Exception:
             return generate_mock_european_data("CL.csv" in url)
 
     # 2. Trata Ligas Sul-Americanas e Domésticas Europeias
     try:
         df = pd.read_csv(url, encoding="latin1", on_bad_lines="skip")
-        
-        # Filtra a última época no Brasileirão/Argentina se existir coluna 'Season'
-        if "Season" in df.columns:
-            max_season = df['Season'].max()
-            df = df[df['Season'] == max_season]
 
-        # Padroniza os nomes das colunas
+        # Filtra a última época no Brasileirão/Argentina se existir a coluna 'Season'
+        if "Season" in df.columns:
+            max_season = df["Season"].max()
+            df = df[df["Season"] == max_season]
+
+        # Padroniza nomes das colunas
         if "Home" in df.columns and "HomeTeam" not in df.columns:
-            df = df.rename(columns={"Home": "HomeTeam", "Away": "AwayTeam", "HG": "FTHG", "AG": "FTAG"})
-            
-        return df.dropna(subset=['HomeTeam', 'AwayTeam'])
-    except Exception as e:
-        st.error(f"Erro ao carregar dados: {e}")
-        return None
-        if 'HC' in df.columns and 'AC' in df.columns:
-            cols_needed.extend(['HC', 'AC'])
-        
-        # Se a época atual ainda tiver poucos jogos, junta dados da época anterior
-        if len(df) < 50:
-            try:
-                df_prev = pd.read_csv(url_prev)
-                df = pd.concat([df_prev[cols_needed], df[cols_needed]], ignore_index=True)
-            except Exception:
-                pass
+            df = df.rename(
+                columns={
+                    "Home": "HomeTeam",
+                    "Away": "AwayTeam",
+                    "HG": "FTHG",
+                    "AG": "FTAG",
+                }
+            )
 
         return df[cols_needed].dropna()
     except Exception:
