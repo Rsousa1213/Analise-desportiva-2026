@@ -5,9 +5,23 @@ import requests
 from scipy.stats import poisson
 
 st.set_page_config(
-    page_title="Plataforma de Análise Desportiva 2026/2027", 
+    page_title="Análise Desportiva 26/27", 
     layout="wide"
 )
+
+# --- REDUZIR LIGEIRAMENTE A LARGURA DA PÁGINA ---
+st.markdown("""
+    <style>
+    .block-container {
+        max-width: 85% !important;
+        padding-top: 1.5rem !important;
+        padding-bottom: 2rem !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("⚽ Análise Desportiva 26/27")
+st.caption("Mercado de Golos & Cantos | Época 2026/2027")
 
 # --- REDUZIR LIGEIRAMENTE A LARGURA DA PÁGINA ---
 st.markdown("""
