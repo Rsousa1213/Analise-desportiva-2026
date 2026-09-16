@@ -190,24 +190,29 @@ def generate_mock_european_data(is_champions=True):
 @st.cache_data
 def load_league_data(league_info):
     url = league_info["url"]
-    url_prev = league_info.get("url_prev", url)
-    is_brazil = "Brasileirão" in selected_league_name
-    is_europe = league_info.get("is_europe", False)
     
-    if is_europe:
+    # 1. Trata competições europeias (UEFA)
+    if "new_league_data/CL.csv" in url or "new_league_data/EL.csv" in url:
         try:
-            df = pd.read_csv(url)
-            cols_needed = ['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
-            if 'HC' in df.columns and 'AC' in df.columns:
-                cols_needed.extend(['HC', 'AC'])
-            return df[cols_needed].dropna()
-        except Exception:
-            return generate_mock_european_data("Champions" in selected_league_name)
+            df = pd.read_csv(url, encoding="latin1", on_bad_lines="skip")
+            if df.empty or "HomeTeam" not in df.columns:
+                return generate_mock_european_data("CL.csv" in url)
+            return df
+        except:
+            return generate_mock_european_data("CL.csv" in url)
 
+    # 2. Trata Ligas Sul-Americanas e Domésticas Europeias
     try:
-        df = pd.read_csv(url)
-        if is_brazil:
-            if 'Season' in df.columns:
+        df = pd.read_csv(url, encoding="latin1", on_bad_lines="skip")
+        
+        # Corrige nome das colunas caso venham como 'Home'/'Away' em vez de 'HomeTeam'/'AwayTeam'
+        if "Home" in df.columns and "HomeTeam" not in df.columns:
+            df = df.rename(columns={"Home": "HomeTeam", "Away": "AwayTeam", "HG": "FTHG", "AG": "FTAG"})
+            
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}")
+        return None
                 max_season = df['Season'].max()
                 df = df[df['Season'] == max_season]
             cols = ['Home', 'Away', 'HG', 'AG']
