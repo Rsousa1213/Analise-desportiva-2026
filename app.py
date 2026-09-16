@@ -11,32 +11,42 @@ st.set_page_config(
 import streamlit as st
 
 
-# Função para aplicar o fundo de estádio com sobreposição legível
 def aplicar_fundo_estadio():
-    url_imagem = "https://raw.githubusercontent.com/Rsousa1213/Analise-desportiva-2026/main/fundo_estadio.jpg"  # Ou um link direto para a tua imagem
+    # Substitui pela URL direta da tua imagem no GitHub ou web
+    url_imagem = "https://raw.githubusercontent.com/Rsousa1213/Analise-desportiva-2026/main/fundo_estadio.jpg"
 
     st.markdown(
         f"""
         <style>
-        /* Fundo completo da aplicação */
+        /* 1. Imagem de fundo no ecrã inteiro com overlay escuro suave */
         .stApp {{
-            background-image: linear-gradient(rgba(14, 17, 23, 0.75), rgba(14, 17, 23, 0.85)), url('{url_imagem}');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('{url_imagem}') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            background-attachment: fixed !important;
         }}
 
-        /* Torna os blocos e tabelas ligeiramente translúcidos com efeito de vidro fosco */
-        [data-testid="stHeader"] {{
-            background-color: rgba(0, 0, 0, 0);
+        /* 2. Remover fundo das barras de topo e elementos globais */
+        [data-testid="stHeader"], [data-testid="stSidebar"] {{
+            background-color: transparent !important;
         }}
-        
+
+        /* 3. Tornar o painel central semitransparente (estilo vidro) */
         .stMainBlockContainer {{
-            background-color: rgba(14, 17, 23, 0.65);
-            border-radius: 12px;
-            padding: 2rem;
-            backdrop-filter: blur(4px);
+            background-color: rgba(18, 18, 18, 0.65) !important;
+            border-radius: 16px !important;
+            padding: 2rem !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }}
+
+        /* 4. Ajustar legibilidade dos textos e cartões */
+        h1, h2, h3, h4, h5, h6, p, label {{
+            color: #FFFFFF !important;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
         }}
         </style>
         """,
@@ -44,7 +54,6 @@ def aplicar_fundo_estadio():
     )
 
 
-# Chamar a função na app
 aplicar_fundo_estadio()
 
 # --- REDUZIR LIGEIRAMENTE A LARGURA DA PÁGINA ---
