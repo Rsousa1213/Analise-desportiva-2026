@@ -76,7 +76,16 @@ LEAGUES = {
         "api_key": "soccer_uefa_europa_league",
         "is_europe": True
     }
-}
+"NL Eerste Divisie (2ª Holanda)": {
+        "url": "https://www.football-data.co.uk/mmz4281/2627/N1.csv",
+        "url_prev": "https://www.football-data.co.uk/mmz4281/2526/N1.csv",
+        "api_key": "soccer_netherlands_eerste_divisie"
+    },
+    "AR Liga Profesional (Argentina)": {
+        "url": "https://www.football-data.co.uk/new_league_data/ARG.csv",
+        "url_prev": "https://www.football-data.co.uk/new_league_data/ARG.csv",
+        "api_key": "soccer_argentina_primera_division"
+    },
 
 # --- SIDEBAR: CONFIGURAÇÕES E API KEY ---
 st.sidebar.header("⚙️ Configurações Gerais")
