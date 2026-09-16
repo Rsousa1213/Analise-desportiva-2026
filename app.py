@@ -106,9 +106,9 @@ LEAGUES = {
         "url_prev": "https://www.football-data.co.uk/mmz4281/2526/E0.csv",
         "api_key": "soccer_epl"
     },
-    "BR Brasileirão Série A": {
-        "url": "https://www.football-data.co.uk/new_league_data/BRA.csv",
-        "url_prev": "https://www.football-data.co.uk/new_league_data/BRA.csv",
+  "BR Brasileirão Série A": {
+        "url": "https://www.football-data.co.uk/new_league_data/brazil.csv",
+        "url_prev": "https://www.football-data.co.uk/new_league_data/brazil.csv",
         "api_key": "soccer_brazil_campeonato"
     },
     "EU Liga dos Campeões": {
@@ -126,11 +126,11 @@ LEAGUES = {
         "url_prev": "https://www.football-data.co.uk/mmz4281/2526/N1.csv",
         "api_key": "soccer_netherlands_eerste_divisie"
     },
-    "AR Liga Profesional (Argentina)": {
-        "url": "https://www.football-data.co.uk/new_league_data/ARG.csv",
-        "url_prev": "https://www.football-data.co.uk/new_league_data/ARG.csv",
+   "AR Liga Profesional (Argentina)": {
+        "url": "https://www.football-data.co.uk/new_league_data/argentina.csv",
+        "url_prev": "https://www.football-data.co.uk/new_league_data/argentina.csv",
         "api_key": "soccer_argentina_primera_division"
-    }
+    },
 }
 
 # --- SIDEBAR: CONFIGURAÇÕES E API KEY ---
