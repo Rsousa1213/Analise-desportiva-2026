@@ -190,9 +190,8 @@ def generate_mock_european_data(is_champions=True):
 @st.cache_data
 def load_league_data(league_info):
     url = league_info["url"]
-    url_prev = league_info.get("url_prev", url)
 
-    # 1. Trata competições europeias (UEFA) se o ficheiro remoto não existir
+    # 1. Trata competições europeias (UEFA)
     if "CL.csv" in url or "EL.csv" in url:
         try:
             df = pd.read_csv(url, encoding="latin1", on_bad_lines="skip")
@@ -202,32 +201,33 @@ def load_league_data(league_info):
         except Exception:
             return generate_mock_european_data("CL.csv" in url)
 
-    # 2. Trata Ligas Sul-Americanas e Domésticas Europeias
+    # 2. Trata Ligas Sul-Americanas e Domésticas
     try:
         df = pd.read_csv(url, encoding="latin1", on_bad_lines="skip")
 
-        # Filtra a última época no Brasileirão/Argentina se existir a coluna 'Season'
+        # Mapeamento flexível de colunas para Brasil / Argentina
+        rename_map = {
+            "Home": "HomeTeam",
+            "Away": "AwayTeam",
+            "HG": "FTHG",
+            "AG": "FTAG",
+            "Res": "FTR",
+        }
+        df = df.rename(columns=rename_map)
+
+        # Filtra a última época se houver coluna Season
         if "Season" in df.columns:
             max_season = df["Season"].max()
             df = df[df["Season"] == max_season]
 
-        # Padroniza nomes das colunas
-        if "Home" in df.columns and "HomeTeam" not in df.columns:
-            df = df.rename(
-                columns={
-                    "Home": "HomeTeam",
-                    "Away": "AwayTeam",
-                    "HG": "FTHG",
-                    "AG": "FTAG",
-                }
-            )
-
-        return df[cols_needed].dropna()
-    except Exception:
-        try:
-            df = pd.read_csv(url_prev)
-            cols_needed = ['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
-            if 'HC' in df.columns and 'AC' in df.columns:
+        # Garante que as colunas mínimas existem
+        if "HomeTeam" in df.columns and "AwayTeam" in df.columns:
+            return df.dropna(subset=["HomeTeam", "AwayTeam"])
+        
+        return df
+    except Exception as e:
+        st.error(f"Erro ao ler CSV da liga: {e}")
+        return None
                 cols_needed.extend(['HC', 'AC'])
             return df[cols_needed].dropna()
         except Exception:
