@@ -205,21 +205,19 @@ def load_league_data(league_info):
     try:
         df = pd.read_csv(url, encoding="latin1", on_bad_lines="skip")
         
-        # Corrige nome das colunas caso venham como 'Home'/'Away' em vez de 'HomeTeam'/'AwayTeam'
+        # Filtra a última época no Brasileirão/Argentina se existir coluna 'Season'
+        if "Season" in df.columns:
+            max_season = df['Season'].max()
+            df = df[df['Season'] == max_season]
+
+        # Padroniza os nomes das colunas
         if "Home" in df.columns and "HomeTeam" not in df.columns:
             df = df.rename(columns={"Home": "HomeTeam", "Away": "AwayTeam", "HG": "FTHG", "AG": "FTAG"})
             
-        return df
+        return df.dropna(subset=['HomeTeam', 'AwayTeam'])
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
         return None
-                max_season = df['Season'].max()
-                df = df[df['Season'] == max_season]
-            cols = ['Home', 'Away', 'HG', 'AG']
-            df = df[cols].rename(columns={'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'})
-            return df.dropna()
-        
-        cols_needed = ['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
         if 'HC' in df.columns and 'AC' in df.columns:
             cols_needed.extend(['HC', 'AC'])
         
