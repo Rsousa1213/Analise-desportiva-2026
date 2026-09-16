@@ -86,6 +86,7 @@ LEAGUES = {
         "url_prev": "https://www.football-data.co.uk/new_league_data/ARG.csv",
         "api_key": "soccer_argentina_primera_division"
     },
+}
 
 # --- SIDEBAR: CONFIGURAÇÕES E API KEY ---
 st.sidebar.header("⚙️ Configurações Gerais")
