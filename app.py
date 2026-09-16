@@ -4,7 +4,21 @@ import numpy as np
 import requests
 from scipy.stats import poisson
 
-st.set_page_config(page_title="Plataforma de Análise Desportiva 2026/2027", layout="wide")
+st.set_page_config(
+    page_title="Plataforma de Análise Desportiva 2026/2027", 
+    layout="wide"
+)
+
+# --- REDUZIR LIGEIRAMENTE A LARGURA DA PÁGINA ---
+st.markdown("""
+    <style>
+    .block-container {
+        max-width: 85% !important;
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("⚽ Plataforma Profissional de Análise Desportiva (Época 2026/2027)")
 st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
@@ -270,3 +284,5 @@ if df is not None and not df.empty:
 
 else:
     st.error("Erro ao carregar dados da competição selecionada.")
+
+
