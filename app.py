@@ -34,7 +34,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("⚽ Plataforma Profissional de Análise Desportiva (Época 2026/2027)")
+
 st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
 
 # --- DICIONÁRIO DE LIGAS (Época 2026/2027: pasta 2627) ---
