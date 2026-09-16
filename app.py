@@ -8,6 +8,44 @@ st.set_page_config(
     page_title="Análise Desportiva 26/27", 
     layout="wide"
 )
+import streamlit as st
+
+
+# Função para aplicar o fundo de estádio com sobreposição legível
+def aplicar_fundo_estadio():
+    url_imagem = "https://raw.githubusercontent.com/Rsousa1213/Analise-desportiva-2026/main/fundo_estadio.jpg"  # Ou um link direto para a tua imagem
+
+    st.markdown(
+        f"""
+        <style>
+        /* Fundo completo da aplicação */
+        .stApp {{
+            background-image: linear-gradient(rgba(14, 17, 23, 0.75), rgba(14, 17, 23, 0.85)), url('{url_imagem}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+
+        /* Torna os blocos e tabelas ligeiramente translúcidos com efeito de vidro fosco */
+        [data-testid="stHeader"] {{
+            background-color: rgba(0, 0, 0, 0);
+        }}
+        
+        .stMainBlockContainer {{
+            background-color: rgba(14, 17, 23, 0.65);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(4px);
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# Chamar a função na app
+aplicar_fundo_estadio()
 
 # --- REDUZIR LIGEIRAMENTE A LARGURA DA PÁGINA ---
 st.markdown("""
