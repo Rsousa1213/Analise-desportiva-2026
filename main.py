@@ -116,9 +116,8 @@ selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", list(
 st.sidebar.markdown("---")
 st.sidebar.subheader("💰 Gestão de Banca")
 banca_inicial = st.sidebar.number_input("Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0)
-stake_pct = st.sidebar.slider("Percentagem de Aposta (%)", min_value=0.5, max_value=10.0, value=2.0, step=0.5)
-valor_stake = (banca_inicial * stake_pct) / 100
-st.sidebar.info(f"Valor recomendado por aposta: **{valor_stake:.2f} €**")
+stake_pct_max = st.sidebar.slider("Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5)
+st.sidebar.info("O valor a apostar agora varia dinamicamente consoante a força do Edge (+EV).")
 
 # 4. Corpo Principal
 if selected_league:
@@ -160,7 +159,6 @@ if selected_league:
             prob_over_1_5 = (1 - (prob_matrix[0,0] + prob_matrix[1,0] + prob_matrix[0,1])) * 100
             odd_over_1_5 = 100 / prob_over_1_5 if prob_over_1_5 > 0 else 0
 
-            # Soma de todas as combinações onde total de golos <= 2 (0-0, 1-0, 0-1, 2-0, 0-2, 1-1)
             prob_under_2_5 = 0
             for i in range(max_g):
                 for j in range(max_g):
@@ -190,7 +188,7 @@ if selected_league:
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            tab1, tab2, tab3, tab4 = st.tabs(["⚽ Over 1.5 Golos", "⚽ Over 2.5 Golos", "🚩 Cantos Over 7.5", "📈 Resumo de Stake"])
+            tab1, tab2, tab3, tab4 = st.tabs(["⚽ Over 1.5 Golos", "⚽ Over 2.5 Golos", "🚩 Cantos Over 7.5", "📈 Resumo de Banca"])
 
             with tab1:
                 st.metric("Probabilidade Over 1.5 Golos", f"{prob_over_1_5:.1f}%", f"Odd Justa: {odd_over_1_5:.2f}")
@@ -202,12 +200,12 @@ if selected_league:
                 st.metric("Probabilidade Over 7.5 Cantos", f"{prob_over_7_5_corners:.1f}%", f"Odd Justa: {odd_over_7_5_corners:.2f}")
 
             with tab4:
-                st.write(f"Banca: **{banca_inicial:.2f} €** | Stake ({stake_pct}%): **{valor_stake:.2f} €**")
+                st.write(f"Banca Inicial: **{banca_inicial:.2f} €** | Stake Máxima Teto: **{stake_pct_max}%**")
 
-            # --- TABELA COMPARATIVA DE VALUE BETS & STAKE RECOMENDADA ---
+            # --- TABELA COMPARATIVA DE VALUE BETS & STAKE DINÂMICA ---
             st.markdown("---")
-            st.subheader("🎯 Comparador de Value Bets & Valor a Apostar")
-            st.markdown(f"Insere as **Odds praticadas pela tua Casa de Apostas**. O valor de aposta recomendado tem por base a tua stake de **{stake_pct}%** ({valor_stake:.2f} €).")
+            st.subheader("🎯 Comparador de Value Bets & Stake Dinâmica")
+            st.markdown("Insere as **Odds da tua Casa de Apostas**. A stake em euros ajusta-se automaticamente de forma inteligente com base na magnitude do **Edge (+EV)**.")
 
             defval_o15 = float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0))
             defval_o25 = float(np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0))
@@ -221,17 +219,25 @@ if selected_league:
             with bc3:
                 bookie_odd_c75 = st.number_input("Odd Casa (Cantos 7.5)", min_value=1.01, max_value=50.0, value=defval_c75, step=0.01)
 
-            # Cálculo de Edge / Valor
+            # Cálculo de Edge / Valor (%)
             edge_o15 = ((prob_over_1_5 / 100) * bookie_odd_o15 - 1) * 100
             edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
             edge_c75 = ((prob_over_7_5_corners / 100) * bookie_odd_c75 - 1) * 100
 
-            # Atribuição da Stake recomendada se houver valor positivo (Edge > 0)
-            stake_rec_o15 = f"{valor_stake:.2f} €" if edge_o15 > 0 else "0.00 €"
-            stake_rec_o25 = f"{valor_stake:.2f} €" if edge_o25 > 0 else "0.00 €"
-            stake_rec_c75 = f"{valor_stake:.2f} €" if edge_c75 > 0 else "0.00 €"
+            # Função de cálculo de stake dinâmica baseada no Edge (fator de escala progressivo limitado pela stake máxima)
+            def calcular_stake_dinamica(edge, banca, max_pct):
+                if edge <= 0:
+                    return 0.0
+                # Exemplo de fator dinâmico: cada 5% de edge aproxima-se da stake máxima definida
+                fator = min(edge / 10.0, 1.0) 
+                percentagem_aplicada = max_pct * fator
+                return (banca * percentagem_aplicada) / 100.0
 
-            # Montagem da Tabela com os três mercados
+            val_o15 = calcular_stake_dinamica(edge_o15, banca_inicial, stake_pct_max)
+            val_o25 = calcular_stake_dinamica(edge_o25, banca_inicial, stake_pct_max)
+            val_c75 = calcular_stake_dinamica(edge_c75, banca_inicial, stake_pct_max)
+
+            # Montagem da Tabela com valores dinâmicos
             tabela_dados = [
                 {
                     "Mercado Base": "Over 1.5 Golos",
@@ -239,7 +245,7 @@ if selected_league:
                     "Odd Justa (Modelo)": f"{odd_over_1_5:.2f}",
                     "Odd Casa de Apostas": f"{bookie_odd_o15:.2f}",
                     "Valor (+EV / Edge)": f"{edge_o15:+.2f}%",
-                    "Aposta Recomendada": stake_rec_o15,
+                    "Aposta Dinâmica": f"{val_o15:.2f} €" if val_o15 > 0 else "0.00 €",
                     "Recomendação": "🔥 VALOR" if edge_o15 > 0 else "❌ Sem Valor"
                 },
                 {
@@ -248,7 +254,7 @@ if selected_league:
                     "Odd Justa (Modelo)": f"{odd_over_2_5:.2f}",
                     "Odd Casa de Apostas": f"{bookie_odd_o25:.2f}",
                     "Valor (+EV / Edge)": f"{edge_o25:+.2f}%",
-                    "Aposta Recomendada": stake_rec_o25,
+                    "Aposta Dinâmica": f"{val_o25:.2f} €" if val_o25 > 0 else "0.00 €",
                     "Recomendação": "🔥 VALOR" if edge_o25 > 0 else "❌ Sem Valor"
                 },
                 {
@@ -257,7 +263,7 @@ if selected_league:
                     "Odd Justa (Modelo)": f"{odd_over_7_5_corners:.2f}",
                     "Odd Casa de Apostas": f"{bookie_odd_c75:.2f}",
                     "Valor (+EV / Edge)": f"{edge_c75:+.2f}%",
-                    "Aposta Recomendada": stake_rec_c75,
+                    "Aposta Dinâmica": f"{val_c75:.2f} €" if val_c75 > 0 else "0.00 €",
                     "Recomendação": "🔥 VALOR" if edge_c75 > 0 else "❌ Sem Valor"
                 }
             ]
