@@ -193,47 +193,27 @@ def generate_mock_european_data(is_champions=True):
 
 # --- CARREGAR DADOS HISTÓRICOS E LISTA COMPLETA DE EQUIPAS ---
 @st.cache_data
-def load_league_data(league_info):
-    raw_url = league_info["url"] if isinstance(league_info, dict) else league_info
+def load_league_data(selected_league):
+    url = LEAGUE_URLS.get(selected_league)
+    if not url:
+        return pd.DataFrame()
 
-    # Garantir que a URL é SEMPRE absoluta e aponta para o site oficial
-    if isinstance(raw_url, list):
-        raw_url = raw_url[0] if raw_url else ""
+    # Garante que a URL tem o protocolo correto se for relativa
+    if isinstance(url, str) and not url.startswith("http"):
+        url = f"https://www.football-data.co.uk/{url.lstrip('/')}"
 
-    if str(raw_url).startswith("http"):
-        url = raw_url
-    else:
-        clean_path = str(raw_url).lstrip("/")
-        url = f"https://www.football-data.co.uk/{clean_path}"
-    
-    # 1. Competições europeias (UEFA)
-    if "CL.csv" in url or "EL.csv" in url:
-        try:
-            import requests, io
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-            res = requests.get(url, headers=headers, timeout=10)
-            if res.status_code == 200:
-                df = pd.read_csv(io.StringIO(res.content.decode('latin1')), on_bad_lines="skip")
-                if not df.empty and "HomeTeam" in df.columns:
-                    return df
-            return generate_mock_european_data("CL.csv" in url)
-        except Exception:
-            return generate_mock_european_data("CL.csv" in url)
-
-    # 2. Ligas Domésticas (Portugal, Japão, Europa, Sul-América)
     try:
-        import requests, io
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         response = requests.get(url, headers=headers, timeout=10)
         
         if response.status_code == 200:
-            df = pd.read_csv(io.StringIO(response.content.decode('latin1')), on_bad_lines="skip")
+            csv_data = io.StringIO(response.content.decode('latin1'))
+            df = pd.read_csv(csv_data, on_bad_lines="skip")
             
-            # Normalização de colunas
+            # Normalização simples de colunas
             column_mapping = {'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'}
             df = df.rename(columns=column_mapping)
             
-            # Tratamento de cantos para ligas sem histórico
             if 'HC' not in df.columns:
                 df['HC'] = 0
             if 'AC' not in df.columns:
@@ -241,13 +221,12 @@ def load_league_data(league_info):
                 
             return df
         else:
-            st.error(f"Erro HTTP {response.status_code} ao aceder à URL: {url}")
+            st.error(f"Erro HTTP {response.status_code} ao aceder à URL")
             return pd.DataFrame()
             
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
-        return pd.DataFrame()
-                
+        return pd.DataFrame()      
 df = load_league_data(selected_league)
 
 if df is not None and not df.empty:
