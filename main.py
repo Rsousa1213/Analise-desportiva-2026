@@ -43,7 +43,7 @@ aplicar_fundo_estadio()
 st.title("⚽ Análise Desportiva 26/27")
 st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
 
-# 2. Dicionário de Ligas
+# 2. Dicionário de Ligas (Com épocas estáveis e testadas)
 LEAGUES = {
     "🇪🇺 Liga dos Campeões 26/27": {"type": "mock_cl"},
     "🇪🇺 Liga Europa 26/27": {"type": "mock_el"},
@@ -103,19 +103,43 @@ def load_league_data(selected_league):
         if response.status_code == 200:
             csv_data = io.StringIO(response.content.decode('latin1'))
             df = pd.read_csv(csv_data, on_bad_lines="skip")
-            df = df.rename(columns={'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'})
+            
+            # Normalização robusta de colunas para evitar falhas de leitura
+            rename_map = {}
+            if 'Home' in df.columns: rename_map['Home'] = 'HomeTeam'
+            if 'Away' in df.columns: rename_map['Away'] = 'AwayTeam'
+            if 'HG' in df.columns: rename_map['HG'] = 'FTHG'
+            if 'AG' in df.columns: rename_map['AG'] = 'FTAG'
+            
+            df = df.rename(columns=rename_map)
+            
+            # Garantir colunas essenciais
+            if 'HomeTeam' not in df.columns or 'AwayTeam' not in df.columns:
+                return pd.DataFrame()
+            if 'FTHG' not in df.columns: df['FTHG'] = 0
+            if 'FTAG' not in df.columns: df['FTAG'] = 0
             if 'HC' not in df.columns: df['HC'] = 0
             if 'AC' not in df.columns: df['AC'] = 0
+            
+            # Limpar linhas vazias
+            df = df.dropna(subset=['HomeTeam', 'AwayTeam'])
             return df
         return pd.DataFrame()
     except Exception:
         return pd.DataFrame()
 
-# Interface
-league_options = ["-- Selecione uma Liga --"] + list(LEAGUES.keys())
-selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", league_options)
+# 5. Interface da Barra Lateral (Ligas + Gestão de Banca)
+selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", list(LEAGUES.keys()))
 
-if selected_league != "-- Selecione uma Liga --":
+st.sidebar.markdown("---")
+st.sidebar.subheader("💰 Gestão de Banca")
+banca_inicial = st.sidebar.number_input("Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0)
+stake_pct = st.sidebar.slider("Percentagem de Aposta (%)", min_value=0.5, max_value=10.0, value=2.0, step=0.5)
+valor_stake = (banca_inicial * stake_pct) / 100
+st.sidebar.info(f"Valor recomendado por aposta: **{valor_stake:.2f} €**")
+
+# Processamento de Dados e Métricas
+if selected_league:
     df = load_league_data(selected_league)
     if df is not None and not df.empty and 'HomeTeam' in df.columns:
         teams = sorted(list(set(df['HomeTeam'].dropna().unique()).union(set(df['AwayTeam'].dropna().unique()))))
@@ -134,7 +158,7 @@ if selected_league != "-- Selecione uma Liga --":
             avg_home_goals_for = home_games['FTHG'].mean()
             avg_home_goals_against = home_games['FTAG'].mean()
             avg_away_goals_for = away_games['FTAG'].mean()
-            avg_away_goals_against = away_games['FTHG'].mean()
+            avg_away_goals_against = home_games['FTHG'].mean()
 
             league_avg_home = df['FTHG'].mean()
             league_avg_away = df['FTAG'].mean()
@@ -162,3 +186,7 @@ if selected_league != "-- Selecione uma Liga --":
             c1.metric("Probabilidade Over 1.5 Golos", f"{prob_over_1_5:.1f}%")
             c2.metric("Probabilidade Over 2.5 Golos", f"{prob_over_2_5:.1f}%")
             c3.metric("Média Estimada de Cantos", f"{avg_total_corners:.1f}")
+        else:
+            st.info("ℹ️ Selecione equipas válidas para calcular as estatísticas.")
+    else:
+        st.warning("⚠️ A carregar dados da competição ou liga sem dados disponíveis de momento.")
