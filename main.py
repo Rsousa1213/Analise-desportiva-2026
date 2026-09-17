@@ -43,14 +43,14 @@ aplicar_fundo_estadio()
 st.title("⚽ Análise Desportiva 26/27")
 st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
 
-# 2. Dicionário de Ligas (Com épocas estáveis e testadas)
+# 2. Dicionário de Ligas com Links Atualizados e Estáveis
 LEAGUES = {
     "🇪🇺 Liga dos Campeões 26/27": {"type": "mock_cl"},
     "🇪🇺 Liga Europa 26/27": {"type": "mock_el"},
-    "PT Liga Portugal": {"url": "https://www.football-data.co.uk/mmz4281/2324/P1.csv", "type": "domestic"},
-    "ES La Liga (Espanha)": {"url": "https://www.football-data.co.uk/mmz4281/2324/SP1.csv", "type": "domestic"},
-    "IT Serie A (Itália)": {"url": "https://www.football-data.co.uk/mmz4281/2324/I1.csv", "type": "domestic"},
-    "EN Premier League (Inglaterra)": {"url": "https://www.football-data.co.uk/mmz4281/2324/E0.csv", "type": "domestic"},
+    "PT Liga Portugal": {"url": "https://www.football-data.co.uk/mmz4281/2425/P1.csv", "type": "domestic"},
+    "ES La Liga (Espanha)": {"url": "https://www.football-data.co.uk/mmz4281/2425/SP1.csv", "type": "domestic"},
+    "IT Serie A (Itália)": {"url": "https://www.football-data.co.uk/mmz4281/2425/I1.csv", "type": "domestic"},
+    "EN Premier League (Inglaterra)": {"url": "https://www.football-data.co.uk/mmz4281/2425/E0.csv", "type": "domestic"},
     "BR Brasileirão (Brasil)": {"url": "https://www.football-data.co.uk/new/BRA.csv", "type": "domestic"},
     "AR Liga Profesional (Argentina)": {"url": "https://www.football-data.co.uk/new/ARG.csv", "type": "domestic"}
 }
@@ -104,7 +104,7 @@ def load_league_data(selected_league):
             csv_data = io.StringIO(response.content.decode('latin1'))
             df = pd.read_csv(csv_data, on_bad_lines="skip")
             
-            # Normalização robusta de colunas para evitar falhas de leitura
+            # Normalização de colunas
             rename_map = {}
             if 'Home' in df.columns: rename_map['Home'] = 'HomeTeam'
             if 'Away' in df.columns: rename_map['Away'] = 'AwayTeam'
@@ -113,7 +113,6 @@ def load_league_data(selected_league):
             
             df = df.rename(columns=rename_map)
             
-            # Garantir colunas essenciais
             if 'HomeTeam' not in df.columns or 'AwayTeam' not in df.columns:
                 return pd.DataFrame()
             if 'FTHG' not in df.columns: df['FTHG'] = 0
@@ -121,14 +120,13 @@ def load_league_data(selected_league):
             if 'HC' not in df.columns: df['HC'] = 0
             if 'AC' not in df.columns: df['AC'] = 0
             
-            # Limpar linhas vazias
             df = df.dropna(subset=['HomeTeam', 'AwayTeam'])
             return df
         return pd.DataFrame()
     except Exception:
         return pd.DataFrame()
 
-# 5. Interface da Barra Lateral (Ligas + Gestão de Banca)
+# 5. Interface da Barra Lateral
 selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", list(LEAGUES.keys()))
 
 st.sidebar.markdown("---")
@@ -138,7 +136,7 @@ stake_pct = st.sidebar.slider("Percentagem de Aposta (%)", min_value=0.5, max_va
 valor_stake = (banca_inicial * stake_pct) / 100
 st.sidebar.info(f"Valor recomendado por aposta: **{valor_stake:.2f} €**")
 
-# Processamento de Dados e Métricas
+# Processamento e Métricas
 if selected_league:
     df = load_league_data(selected_league)
     if df is not None and not df.empty and 'HomeTeam' in df.columns:
