@@ -48,9 +48,9 @@ def aplicar_estilo_visual():
 aplicar_estilo_visual()
 
 st.title("⚽ Análise Desportiva 26/27")
-st.markdown("Análise Avançada com Foco em **Over 1.5 & Over 2.5 Golos** & **Over 7.5 Cantos**")
+st.markdown("Análise Avançada com Foco em **Over 1.5, 2.5, 3.5 Golos** & **Over 7.5 Cantos**")
 
-# 2. Dicionário de Ligas com Equipas Reais (Com Bundesliga Alemã incluída)
+# 2. Dicionário de Ligas com Equipas Reais
 LEAGUES_TEAMS = {
     "🏆 Copa Libertadores": [
         "Flamengo", "Palmeiras", "Atlético Mineiro", "Fluminense", "São Paulo", 
@@ -164,13 +164,13 @@ if selected_league:
             lambda_away = (avg_away_goals_for / league_avg_away if league_avg_away else 1) * \
                           (avg_home_goals_against / league_avg_away if league_avg_away else 1) * league_avg_away
 
-            max_g = 7
+            max_g = 8
             prob_matrix = np.zeros((max_g, max_g))
             for i in range(max_g):
                 for j in range(max_g):
                     prob_matrix[i, j] = poisson.pmf(i, lambda_home) * poisson.pmf(j, lambda_away)
 
-            # Probabilidades de Golos (Over 1.5 e Over 2.5)
+            # Probabilidades de Golos (Over 1.5, Over 2.5, Over 3.5)
             prob_over_1_5 = (1 - (prob_matrix[0,0] + prob_matrix[1,0] + prob_matrix[0,1])) * 100
             odd_over_1_5 = 100 / prob_over_1_5 if prob_over_1_5 > 0 else 0
 
@@ -181,6 +181,14 @@ if selected_league:
                         prob_under_2_5 += prob_matrix[i, j]
             prob_over_2_5 = (1 - prob_under_2_5) * 100
             odd_over_2_5 = 100 / prob_over_2_5 if prob_over_2_5 > 0 else 0
+
+            prob_under_3_5 = 0
+            for i in range(max_g):
+                for j in range(max_g):
+                    if (i + j) <= 3:
+                        prob_under_3_5 += prob_matrix[i, j]
+            prob_over_3_5 = (1 - prob_under_3_5) * 100
+            odd_over_3_5 = 100 / prob_over_3_5 if prob_over_3_5 > 0 else 0
 
             # Cantos
             home_corners = home_games['HC'].mean() + home_games['AC'].mean()
@@ -203,7 +211,9 @@ if selected_league:
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            tab1, tab2, tab3, tab4 = st.tabs(["⚽ Over 1.5 Golos", "⚽ Over 2.5 Golos", "🚩 Cantos Over 7.5", "📈 Resumo de Banca"])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs([
+                "⚽ Over 1.5", "⚽ Over 2.5", "⚽ Over 3.5", "🚩 Cantos Over 7.5", "📈 Banca"
+            ])
 
             with tab1:
                 st.metric("Probabilidade Over 1.5 Golos", f"{prob_over_1_5:.1f}%", f"Odd Justa: {odd_over_1_5:.2f}")
@@ -212,31 +222,38 @@ if selected_league:
                 st.metric("Probabilidade Over 2.5 Golos", f"{prob_over_2_5:.1f}%", f"Odd Justa: {odd_over_2_5:.2f}")
 
             with tab3:
-                st.metric("Probabilidade Over 7.5 Cantos", f"{prob_over_7_5_corners:.1f}%", f"Odd Justa: {odd_over_7_5_corners:.2f}")
+                st.metric("Probabilidade Over 3.5 Golos", f"{prob_over_3_5:.1f}%", f"Odd Justa: {odd_over_3_5:.2f}")
 
             with tab4:
+                st.metric("Probabilidade Over 7.5 Cantos", f"{prob_over_7_5_corners:.1f}%", f"Odd Justa: {odd_over_7_5_corners:.2f}")
+
+            with tab5:
                 st.write(f"Banca Inicial: **{banca_inicial:.2f} €** | Stake Máxima Teto: **{stake_pct_max}%**")
 
             # --- TABELA COMPARATIVA DE VALUE BETS & STAKE DINÂMICA ---
             st.markdown("---")
             st.subheader("🎯 Comparador de Value Bets & Stake Dinâmica")
-            st.markdown("Insere as **Odds da tua Casa de Apostas**. A stake em euros ajusta-se automaticamente de forma inteligente com base na magnitude do **Edge (+EV)**.")
+            st.markdown("Insere as **Odds da tua Casa de Apostas**. A stake em euros ajusta-se automaticamente com base na magnitude do **Edge (+EV)**.")
 
             defval_o15 = float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0))
             defval_o25 = float(np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0))
+            defval_o35 = float(np.clip(round(odd_over_3_5 + 0.1, 2), 1.01, 50.0))
             defval_c75 = float(np.clip(round(odd_over_7_5_corners + 0.1, 2), 1.01, 50.0))
 
-            bc1, bc2, bc3 = st.columns(3)
+            bc1, bc2, bc3, bc4 = st.columns(4)
             with bc1:
                 bookie_odd_o15 = st.number_input("Odd Casa (Over 1.5)", min_value=1.01, max_value=50.0, value=defval_o15, step=0.01)
             with bc2:
                 bookie_odd_o25 = st.number_input("Odd Casa (Over 2.5)", min_value=1.01, max_value=50.0, value=defval_o25, step=0.01)
             with bc3:
+                bookie_odd_o35 = st.number_input("Odd Casa (Over 3.5)", min_value=1.01, max_value=50.0, value=defval_o35, step=0.01)
+            with bc4:
                 bookie_odd_c75 = st.number_input("Odd Casa (Cantos 7.5)", min_value=1.01, max_value=50.0, value=defval_c75, step=0.01)
 
             # Cálculo de Edge / Valor (%)
             edge_o15 = ((prob_over_1_5 / 100) * bookie_odd_o15 - 1) * 100
             edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
+            edge_o35 = ((prob_over_3_5 / 100) * bookie_odd_o35 - 1) * 100
             edge_c75 = ((prob_over_7_5_corners / 100) * bookie_odd_c75 - 1) * 100
 
             def calcular_stake_dinamica(edge, banca, max_pct):
@@ -248,6 +265,7 @@ if selected_league:
 
             val_o15 = calcular_stake_dinamica(edge_o15, banca_inicial, stake_pct_max)
             val_o25 = calcular_stake_dinamica(edge_o25, banca_inicial, stake_pct_max)
+            val_o35 = calcular_stake_dinamica(edge_o35, banca_inicial, stake_pct_max)
             val_c75 = calcular_stake_dinamica(edge_c75, banca_inicial, stake_pct_max)
 
             # Montagem da Tabela com valores dinâmicos
@@ -269,6 +287,15 @@ if selected_league:
                     "Valor (+EV / Edge)": f"{edge_o25:+.2f}%",
                     "Aposta Dinâmica": f"{val_o25:.2f} €" if val_o25 > 0 else "0.00 €",
                     "Recomendação": "🔥 VALOR" if edge_o25 > 0 else "❌ Sem Valor"
+                },
+                {
+                    "Mercado Base": "Over 3.5 Golos",
+                    "Probabilidade": f"{prob_over_3_5:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_over_3_5:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_o35:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_o35:+.2f}%",
+                    "Aposta Dinâmica": f"{val_o35:.2f} €" if val_o35 > 0 else "0.00 €",
+                    "Recomendação": "🔥 VALOR" if edge_o35 > 0 else "❌ Sem Valor"
                 },
                 {
                     "Mercado Base": "Over 7.5 Cantos",
