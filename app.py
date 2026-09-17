@@ -213,7 +213,8 @@ def load_league_data(league_info):
             url, 
             headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         )
-        df = pd.read_csv(req, encoding="latin1", on_bad_lines="skip")
+        with urllib.request.urlopen(req) as response:
+            df = pd.read_csv(response, encoding="latin1", on_bad_lines="skip")
         
         column_mapping = {'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'}
         df = df.rename(columns=column_mapping)
