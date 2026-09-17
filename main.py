@@ -50,8 +50,13 @@ aplicar_estilo_visual()
 st.title("⚽ Análise Desportiva 26/27")
 st.markdown("Análise Avançada com Foco em **Over 1.5 & Over 2.5 Golos** & **Over 7.5 Cantos**")
 
-# 2. Dicionário de Ligas com Equipas Reais
+# 2. Dicionário de Ligas com Equipas Reais (Incluindo Copa Libertadores)
 LEAGUES_TEAMS = {
+    "🏆 Copa Libertadores": [
+        "Flamengo", "Palmeiras", "Atlético Mineiro", "Fluminense", "São Paulo", 
+        "Internacional", "Grêmio", "Botafogo", "River Plate", "Boca Juniors", 
+        "Racing Club", "Independiente del Valle", "Peñarol", "Nacional", "Colo-Colo", "Estudiantes"
+    ],
     "🇪🇺 Liga dos Campeões 26/27": [
         "Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Bayern München", 
         "Bayer Leverkusen", "Inter", "Juventus", "PSG", "Benfica", "Sporting CP", 
@@ -224,11 +229,9 @@ if selected_league:
             edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
             edge_c75 = ((prob_over_7_5_corners / 100) * bookie_odd_c75 - 1) * 100
 
-            # Função de cálculo de stake dinâmica baseada no Edge (fator de escala progressivo limitado pela stake máxima)
             def calcular_stake_dinamica(edge, banca, max_pct):
                 if edge <= 0:
                     return 0.0
-                # Exemplo de fator dinâmico: cada 5% de edge aproxima-se da stake máxima definida
                 fator = min(edge / 10.0, 1.0) 
                 percentagem_aplicada = max_pct * fator
                 return (banca * percentagem_aplicada) / 100.0
