@@ -43,41 +43,18 @@ aplicar_fundo_estadio()
 st.title("⚽ Análise Desportiva 26/27")
 st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
 
-# 2. Dicionário de Ligas (URLs Diretas e Testadas)
+# 2. Dicionário de Ligas
 LEAGUES = {
-    "PT Liga Portugal": {
-        "url": "https://www.football-data.co.uk/mmz4281/2324/P1.csv",
-        "type": "domestic"
-    },
-    "ES La Liga (Espanha)": {
-        "url": "https://www.football-data.co.uk/mmz4281/2324/SP1.csv",
-        "type": "domestic"
-    },
-    "IT Serie A (Itália)": {
-        "url": "https://www.football-data.co.uk/mmz4281/2324/I1.csv",
-        "type": "domestic"
-    },
-    "EN Premier League (Inglaterra)": {
-        "url": "https://www.football-data.co.uk/mmz4281/2324/E0.csv",
-        "type": "domestic"
-    },
-    "BR Brasileirão (Brasil)": {
-        "url": "https://www.football-data.co.uk/new/BRA.csv",
-        "type": "domestic"
-    },
-    "AR Liga Profesional (Argentina)": {
-        "url": "https://www.football-data.co.uk/new/ARG.csv",
-        "type": "domestic"
-    },
-    "🇪🇺 Liga dos Campeões 26/27": {
-        "type": "mock_cl"
-    },
-    "🇪🇺 Liga Europa 26/27": {
-        "type": "mock_el"
-    }
+    "🇪🇺 Liga dos Campeões 26/27": {"type": "mock_cl"},
+    "🇪🇺 Liga Europa 26/27": {"type": "mock_el"},
+    "PT Liga Portugal": {"url": "https://www.football-data.co.uk/mmz4281/2324/P1.csv", "type": "domestic"},
+    "ES La Liga (Espanha)": {"url": "https://www.football-data.co.uk/mmz4281/2324/SP1.csv", "type": "domestic"},
+    "IT Serie A (Itália)": {"url": "https://www.football-data.co.uk/mmz4281/2324/I1.csv", "type": "domestic"},
+    "EN Premier League (Inglaterra)": {"url": "https://www.football-data.co.uk/mmz4281/2324/E0.csv", "type": "domestic"},
+    "BR Brasileirão (Brasil)": {"url": "https://www.football-data.co.uk/new/BRA.csv", "type": "domestic"},
+    "AR Liga Profesional (Argentina)": {"url": "https://www.football-data.co.uk/new/ARG.csv", "type": "domestic"}
 }
 
-# 3. Equipas Mock 2026/2027 para Competições Europeias
 TEAMS_CL_2627 = [
     "Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Bayern München", 
     "Bayer Leverkusen", "Inter", "Juventus", "PSG", "Benfica", "Sporting CP", 
@@ -96,21 +73,16 @@ def generate_mock_data(team_list):
     for i in range(len(team_list)):
         for j in range(len(team_list)):
             if i != j:
-                hg = np.random.poisson(1.6)
-                ag = np.random.poisson(1.1)
-                hc = np.random.randint(3, 9)
-                ac = np.random.randint(2, 7)
                 records.append({
                     "HomeTeam": team_list[i],
                     "AwayTeam": team_list[j],
-                    "FTHG": hg,
-                    "FTAG": ag,
-                    "HC": hc,
-                    "AC": ac
+                    "FTHG": np.random.poisson(1.6),
+                    "FTAG": np.random.poisson(1.1),
+                    "HC": np.random.randint(3, 9),
+                    "AC": np.random.randint(2, 7)
                 })
     return pd.DataFrame(records)
 
-# 4. Função para Carregar Dados
 @st.cache_data
 def load_league_data(selected_league):
     info = LEAGUES.get(selected_league, {})
@@ -126,88 +98,67 @@ def load_league_data(selected_league):
         return pd.DataFrame()
 
     try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url, headers=headers, timeout=10)
-        
         if response.status_code == 200:
             csv_data = io.StringIO(response.content.decode('latin1'))
             df = pd.read_csv(csv_data, on_bad_lines="skip")
-            
-            # Padronização de Colunas
-            column_mapping = {'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'}
-            df = df.rename(columns=column_mapping)
-            
-            if 'HC' not in df.columns:
-                df['HC'] = 0
-            if 'AC' not in df.columns:
-                df['AC'] = 0
-                
+            df = df.rename(columns={'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'})
+            if 'HC' not in df.columns: df['HC'] = 0
+            if 'AC' not in df.columns: df['AC'] = 0
             return df
-        else:
-            return pd.DataFrame()
+        return pd.DataFrame()
     except Exception:
         return pd.DataFrame()
 
-# 5. Interface de Seleção
+# Interface
 league_options = ["-- Selecione uma Liga --"] + list(LEAGUES.keys())
 selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", league_options)
 
 if selected_league != "-- Selecione uma Liga --":
     df = load_league_data(selected_league)
-else:
-    df = pd.DataFrame()
+    if df is not None and not df.empty and 'HomeTeam' in df.columns:
+        teams = sorted(list(set(df['HomeTeam'].dropna().unique()).union(set(df['AwayTeam'].dropna().unique()))))
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            home_team = st.selectbox("Equipa da Casa", teams, index=0)
+        with col2:
+            away_options = [t for t in teams if t != home_team]
+            away_team = st.selectbox("Equipa Visitante", away_options, index=0 if away_options else 0)
 
-if df is not None and not df.empty and 'HomeTeam' in df.columns:
-    teams = sorted(list(set(df['HomeTeam'].dropna().unique()).union(set(df['AwayTeam'].dropna().unique()))))
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        home_team = st.selectbox("Equipa da Casa", teams, index=0)
-    with col2:
-        away_options = [t for t in teams if t != home_team]
-        away_team = st.selectbox("Equipa Visitante", away_options, index=0 if away_options else 0)
+        home_games = df[df['HomeTeam'] == home_team]
+        away_games = df[df['AwayTeam'] == away_team]
 
-    # Métricas de Golos e Cantos
-    home_games = df[df['HomeTeam'] == home_team]
-    away_games = df[df['AwayTeam'] == away_team]
+        if not home_games.empty and not away_games.empty:
+            avg_home_goals_for = home_games['FTHG'].mean()
+            avg_home_goals_against = home_games['FTAG'].mean()
+            avg_away_goals_for = away_games['FTAG'].mean()
+            avg_away_goals_against = away_games['FTHG'].mean()
 
-    if not home_games.empty and not away_games.empty:
-        avg_home_goals_for = home_games['FTHG'].mean()
-        avg_home_goals_against = home_games['FTAG'].mean()
-        avg_away_goals_for = away_games['FTAG'].mean()
-        avg_away_goals_against = away_games['FTHG'].mean()
+            league_avg_home = df['FTHG'].mean()
+            league_avg_away = df['FTAG'].mean()
 
-        league_avg_home = df['FTHG'].mean()
-        league_avg_away = df['FTAG'].mean()
+            lambda_home = (avg_home_goals_for / league_avg_home if league_avg_home else 1) * \
+                          (avg_away_goals_against / league_avg_home if league_avg_home else 1) * league_avg_home
+            lambda_away = (avg_away_goals_for / league_avg_away if league_avg_away else 1) * \
+                          (avg_home_goals_against / league_avg_away if league_avg_away else 1) * league_avg_away
 
-        # Modelo Poisson para Golos
-        lambda_home = (avg_home_goals_for / league_avg_home if league_avg_home else 1) * \
-                      (avg_away_goals_against / league_avg_home if league_avg_home else 1) * league_avg_home
-        lambda_away = (avg_away_goals_for / league_avg_away if league_avg_away else 1) * \
-                      (avg_home_goals_against / league_avg_away if league_avg_away else 1) * league_avg_away
+            max_g = 7
+            prob_matrix = np.zeros((max_g, max_g))
+            for i in range(max_g):
+                for j in range(max_g):
+                    prob_matrix[i, j] = poisson.pmf(i, lambda_home) * poisson.pmf(j, lambda_away)
 
-        max_g = 7
-        prob_matrix = np.zeros((max_g, max_g))
-        for i in range(max_g):
-            for j in range(max_g):
-                prob_matrix[i, j] = poisson.pmf(i, lambda_home) * poisson.pmf(j, lambda_away)
+            prob_over_1_5 = (1 - (prob_matrix[0,0] + prob_matrix[1,0] + prob_matrix[0,1])) * 100
+            prob_over_2_5 = (1 - np.sum(np.tril(prob_matrix, 2))) * 100
 
-        prob_over_1_5 = (1 - (prob_matrix[0,0] + prob_matrix[1,0] + prob_matrix[0,1])) * 100
-        prob_over_2_5 = (1 - np.sum(np.tril(prob_matrix, 2))) * 100
+            home_corners = home_games['HC'].mean() + home_games['AC'].mean()
+            away_corners = away_games['HC'].mean() + away_games['AC'].mean()
+            avg_total_corners = (home_corners + away_corners) / 2
 
-        # Média de Cantos
-        home_corners = home_games['HC'].mean() + home_games['AC'].mean()
-        away_corners = away_games['HC'].mean() + away_games['AC'].mean()
-        avg_total_corners = (home_corners + away_corners) / 2
-
-        st.subheader("📊 Análise do Jogo")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Probabilidade Over 1.5 Golos", f"{prob_over_1_5:.1f}%")
-        c2.metric("Probabilidade Over 2.5 Golos", f"{prob_over_2_5:.1f}%")
-        c3.metric("Média Estimada de Cantos", f"{avg_total_corners:.1f}")
-    else:
-        st.info("Dados insuficientes para calcular estatísticas entre estas duas equipas.")
-else:
-    st.warning("A carregar dados da competição ou liga sem dados disponíveis de momento.")
-
-
+            st.subheader("📊 Análise do Jogo")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Probabilidade Over 1.5 Golos", f"{prob_over_1_5:.1f}%")
+            c2.metric("Probabilidade Over 2.5 Golos", f"{prob_over_2_5:.1f}%")
+            c3.metric("Média Estimada de Cantos", f"{avg_total_corners:.1f}")
