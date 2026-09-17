@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -149,7 +148,7 @@ if selected_league:
                     prob_matrix[i, j] = poisson.pmf(i, lambda_home) * poisson.pmf(j, lambda_away)
 
             prob_over_1_5 = (1 - (prob_matrix[0,0] + prob_matrix[1,0] + prob_matrix[0,1])) * 100
-            prob_over_2.5 = (1 - np.sum(np.tril(prob_matrix, 2))) * 100 # type: ignore
+            prob_over_2_5 = (1 - np.sum(np.tril(prob_matrix, 2))) * 100
 
             home_corners = home_games['HC'].mean() + home_games['AC'].mean()
             away_corners = away_games['HC'].mean() + away_games['AC'].mean()
