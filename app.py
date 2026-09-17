@@ -131,6 +131,11 @@ LEAGUES = {
         "url_prev": "https://www.football-data.co.uk/new/ARG.csv",
         "api_key": "soccer_argentina_primera_division"
     },
+    "JP J1 League (Japão)": {
+        "url": "https://www.football-data.co.uk/new_league_data/JPN.csv",
+        "url_prev": "https://www.football-data.co.uk/new_league_data/JPN.csv",
+        "api_key": "soccer_japan_j_league"
+    }
 }
 
 # --- SIDEBAR: CONFIGURAÇÕES E API KEY ---
