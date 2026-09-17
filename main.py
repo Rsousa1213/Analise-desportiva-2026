@@ -48,7 +48,7 @@ def aplicar_estilo_visual():
 aplicar_estilo_visual()
 
 st.title("⚽ Análise Desportiva 26/27")
-st.markdown("Análise Avançada para **Mercado de Golos, BTTS & Cantos** com Comparador de Value Bets")
+st.markdown("Análise Avançada com Foco em **Over 1.5 Golos** & **Over 7.5 Cantos**")
 
 # 2. Dicionário de Ligas com Equipas Reais
 LEAGUES_TEAMS = {
@@ -156,21 +156,19 @@ if selected_league:
                 for j in range(max_g):
                     prob_matrix[i, j] = poisson.pmf(i, lambda_home) * poisson.pmf(j, lambda_away)
 
-            # Probabilidades
+            # Probabilidades de Golos
             prob_over_1_5 = (1 - (prob_matrix[0,0] + prob_matrix[1,0] + prob_matrix[0,1])) * 100
-            prob_over_2_5 = (1 - np.sum(np.tril(prob_matrix, 2))) * 100
-            prob_btts = (1 - np.sum(prob_matrix[0, :]) - np.sum(prob_matrix[:, 0]) + prob_matrix[0,0]) * 100
-
-            # Odds Justas
             odd_over_1_5 = 100 / prob_over_1_5 if prob_over_1_5 > 0 else 0
-            odd_over_2_5 = 100 / prob_over_2_5 if prob_over_2_5 > 0 else 0
-            odd_btts = 100 / prob_btts if prob_btts > 0 else 0
 
-            # Cantos
+            # Cantos (Média estimada e probabilidade estimada para Over 7.5 baseada em Poisson de cantos)
             home_corners = home_games['HC'].mean() + home_games['AC'].mean()
             away_corners = away_games['HC'].mean() + away_games['AC'].mean()
             avg_total_corners = (home_corners + away_corners) / 2
-            estimated_ht_corners = avg_total_corners * 0.45
+            
+            # Cálculo de Poisson para Cantos (utilizando a média total de cantos como lambda)
+            lambda_corners = avg_total_corners
+            prob_over_7_5_corners = (1 - sum(poisson.pmf(k, lambda_corners) for k in range(8))) * 100
+            odd_over_7_5_corners = 100 / prob_over_7_5_corners if prob_over_7_5_corners > 0 else 0
 
             # --- APRESENTAÇÃO DE DADOS ---
             st.markdown("---")
@@ -180,49 +178,45 @@ if selected_league:
             col_m1.metric("Média Esperada (Casa)", f"{lambda_home:.2f} golos")
             col_m2.metric("Média Esperada (Fora)", f"{lambda_away:.2f} golos")
             col_m3.metric("Golos Totais Esperados", f"{(lambda_home + lambda_away):.2f}")
-            col_m4.metric("Previsão de Cantos", f"{avg_total_corners:.1f}")
+            col_m4.metric("Média Cantos Esperados", f"{avg_total_corners:.1f}")
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            tab1, tab2, tab3 = st.tabs(["⚽ Mercado de Golos", "🚩 Mercado de Cantos", "📈 Resumo de Stake"])
+            tab1, tab2, tab3 = st.tabs(["⚽ Mercado Principal (Over 1.5)", "🚩 Mercado Principal (Cantos Over 7.5)", "📈 Resumo de Stake"])
 
             with tab1:
-                gc1, gc2, gc3 = st.columns(3)
-                gc1.metric("Prob. Over 1.5 Golos", f"{prob_over_1_5:.1f}%", f"Odd Justa: {odd_over_1_5:.2f}")
-                gc2.metric("Prob. Over 2.5 Golos", f"{prob_over_2_5:.1f}%", f"Odd Justa: {odd_over_2_5:.2f}")
-                gc3.metric("Ambas Marcam (BTTS)", f"{prob_btts:.1f}%", f"Odd Justa: {odd_btts:.2f}")
+                gc1, = st.columns(1)
+                gc1.metric("Probabilidade Over 1.5 Golos", f"{prob_over_1_5:.1f}%", f"Odd Justa: {odd_over_1_5:.2f}")
 
             with tab2:
-                cc1, cc2 = st.columns(2)
-                cc1.metric("Média Cantos 1ª Parte", f"{estimated_ht_corners:.1f}")
-                cc2.metric("Média Cantos Jogo Completo", f"{avg_total_corners:.1f}")
+                cc1, = st.columns(1)
+                cc1.metric("Probabilidade Over 7.5 Cantos", f"{prob_over_7_5_corners:.1f}%", f"Odd Justa: {odd_over_7_5_corners:.2f}")
 
             with tab3:
                 st.write(f"Banca: **{banca_inicial:.2f} €** | Stake ({stake_pct}%): **{valor_stake:.2f} €**")
 
-            # --- TABELA COMPARATIVA DE VALUE BETS ---
+            # --- TABELA COMPARATIVA DE VALUE BETS (Foco em Over 1.5 Golos e Over 7.5 Cantos) ---
             st.markdown("---")
             st.subheader("🎯 Comparador de Value Bets & Odds Reais")
-            st.markdown("Insere a **Odd praticada pela tua Casa de Apostas** para verificar se existe valor matemático (Edge > 0%).")
+            st.markdown("Insere a **Odd praticada pela tua Casa de Apostas** para as linhas base de **Over 1.5 Golos** e **Over 7.5 Cantos**.")
 
-            # Inputs para o utilizador colocar as odds da casa de apostas
-            bc1, bc2, bc3 = st.columns(3)
+            defval_o15 = float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0))
+            defval_c75 = float(np.clip(round(odd_over_7_5_corners + 0.1, 2), 1.01, 50.0))
+
+            bc1, bc2 = st.columns(2)
             with bc1:
-                bookie_odd_o15 = st.number_input("Odd Casa (Over 1.5)", min_value=1.01, max_value=10.0, value=round(odd_over_1_5 + 0.1, 2), step=0.01)
+                bookie_odd_o15 = st.number_input("Odd Casa (Over 1.5 Golos)", min_value=1.01, max_value=50.0, value=defval_o15, step=0.01)
             with bc2:
-                bookie_odd_o25 = st.number_input("Odd Casa (Over 2.5)", min_value=1.01, max_value=20.0, value=round(odd_over_2_5 + 0.15, 2), step=0.01)
-            with bc3:
-                bookie_odd_btts = st.number_input("Odd Casa (BTTS)", min_value=1.01, max_value=15.0, value=round(odd_btts + 0.1, 2), step=0.01)
+                bookie_odd_c75 = st.number_input("Odd Casa (Over 7.5 Cantos)", min_value=1.01, max_value=50.0, value=defval_c75, step=0.01)
 
-            # Cálculo de Valor / Edge (%) = (Probabilidade do Modelo * Odd da Casa) - 1
+            # Cálculo de Edge / Valor
             edge_o15 = ((prob_over_1_5 / 100) * bookie_odd_o15 - 1) * 100
-            edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
-            edge_btts = ((prob_btts / 100) * bookie_odd_btts - 1) * 100
+            edge_c75 = ((prob_over_7_5_corners / 100) * bookie_odd_c75 - 1) * 100
 
-            # Montagem da Tabela Resumo
+            # Montagem da Tabela Resumo focada nestes dois mercados base
             tabela_dados = [
                 {
-                    "Mercado": "Over 1.5 Golos",
+                    "Mercado Base": "Over 1.5 Golos",
                     "Probabilidade": f"{prob_over_1_5:.1f}%",
                     "Odd Justa (Modelo)": f"{odd_over_1_5:.2f}",
                     "Odd Casa de Apostas": f"{bookie_odd_o15:.2f}",
@@ -230,20 +224,12 @@ if selected_league:
                     "Recomendação": "🔥 VALOR" if edge_o15 > 0 else "❌ Sem Valor"
                 },
                 {
-                    "Mercado": "Over 2.5 Golos",
-                    "Probabilidade": f"{prob_over_2_5:.1f}%",
-                    "Odd Justa (Modelo)": f"{odd_over_2_5:.2f}",
-                    "Odd Casa de Apostas": f"{bookie_odd_o25:.2f}",
-                    "Valor (+EV / Edge)": f"{edge_o25:+.2f}%",
-                    "Recomendação": "🔥 VALOR" if edge_o25 > 0 else "❌ Sem Valor"
-                },
-                {
-                    "Mercado": "Ambas Marcam (BTTS)",
-                    "Probabilidade": f"{prob_btts:.1f}%",
-                    "Odd Justa (Modelo)": f"{odd_btts:.2f}",
-                    "Odd Casa de Apostas": f"{bookie_odd_btts:.2f}",
-                    "Valor (+EV / Edge)": f"{edge_btts:+.2f}%",
-                    "Recomendação": "🔥 VALOR" if edge_btts > 0 else "❌ Sem Valor"
+                    "Mercado Base": "Over 7.5 Cantos",
+                    "Probabilidade": f"{prob_over_7_5_corners:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_over_7_5_corners:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_c75:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_c75:+.2f}%",
+                    "Recomendação": "🔥 VALOR" if edge_c75 > 0 else "❌ Sem Valor"
                 }
             ]
 
