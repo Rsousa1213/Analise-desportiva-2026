@@ -205,9 +205,6 @@ def load_league_data(league_info):
     else:
         clean_path = str(raw_url).lstrip("/")
         url = f"https://www.football-data.co.uk/{clean_path}"
-    else:
-        clean_path = str(raw_url).lstrip("/")
-        url = f"https://www.football-data.co.uk/{clean_path}"
     
     # 1. Competições europeias (UEFA)
     if "CL.csv" in url or "EL.csv" in url:
