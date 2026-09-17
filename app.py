@@ -195,15 +195,16 @@ def generate_mock_european_data(is_champions=True):
 @st.cache_data
 def load_league_data(league_info):
     raw_url = league_info["url"] if isinstance(league_info, dict) else league_info
-    
+
     # Garantir que a URL é SEMPRE absoluta e aponta para o site oficial
-    raw_url = LEAGUE_URLS.get(selected_league, "")
-    
     if isinstance(raw_url, list):
         raw_url = raw_url[0] if raw_url else ""
 
     if str(raw_url).startswith("http"):
         url = raw_url
+    else:
+        clean_path = str(raw_url).lstrip("/")
+        url = f"https://www.football-data.co.uk/{clean_path}"
     else:
         clean_path = str(raw_url).lstrip("/")
         url = f"https://www.football-data.co.uk/{clean_path}"
