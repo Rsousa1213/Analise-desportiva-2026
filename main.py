@@ -9,39 +9,48 @@ st.set_page_config(
     layout="wide"
 )
 
-def aplicar_fundo_estadio():
+def aplicar_estilo_visual():
     url_imagem = "https://raw.githubusercontent.com/Rsousa1213/Analise-desportiva-2026/main/fundo_estadio.jpg"
     st.markdown(
         f"""
         <style>
         .stApp {{
-            background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('{url_imagem}') !important;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.85)), url('{url_imagem}') !important;
             background-size: cover !important;
             background-position: center !important;
             background-repeat: no-repeat !important;
             background-attachment: fixed !important;
         }}
         [data-testid="stHeader"], [data-testid="stSidebar"] {{
-            background-color: transparent !important;
+            background-color: rgba(15, 15, 15, 0.8) !important;
         }}
         .stMainBlockContainer {{
-            background-color: rgba(18, 18, 18, 0.65) !important;
+            background-color: rgba(22, 22, 22, 0.92) !important;
             border-radius: 16px !important;
-            padding: 2rem !important;
-            backdrop-filter: blur(8px) !important;
-            -webkit-backdrop-filter: blur(8px) !important;
+            padding: 2.5rem !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }}
+        h1, h2, h3, p, label, .stMarkdown {{
+            color: #f0f2f6 !important;
+        }}
+        div[data-testid="stMetric"] {{
+            background-color: rgba(35, 35, 35, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }}
         </style>
         """,
         unsafe_allow_html=True
     )
 
-aplicar_fundo_estadio()
+aplicar_estilo_visual()
 
 st.title("⚽ Análise Desportiva 26/27")
-st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
+st.markdown("Análise Avançada para **Mercado de Golos, BTTS & Cantos** com Odds Automáticas")
 
-# 2. Dicionário de Ligas com Equipas Reais por Competição
+# 2. Dicionário de Ligas com Equipas Reais
 LEAGUES_TEAMS = {
     "🇪🇺 Liga dos Campeões 26/27": [
         "Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Bayern München", 
@@ -101,7 +110,7 @@ def generate_league_data(team_list):
                 })
     return pd.DataFrame(records)
 
-# 5. Interface da Barra Lateral
+# 3. Barra Lateral (Gestão de Banca)
 selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", list(LEAGUES_TEAMS.keys()))
 
 st.sidebar.markdown("---")
@@ -111,7 +120,7 @@ stake_pct = st.sidebar.slider("Percentagem de Aposta (%)", min_value=0.5, max_va
 valor_stake = (banca_inicial * stake_pct) / 100
 st.sidebar.info(f"Valor recomendado por aposta: **{valor_stake:.2f} €**")
 
-# Processamento e Métricas
+# 4. Corpo Principal
 if selected_league:
     teams_list = LEAGUES_TEAMS[selected_league]
     df = generate_league_data(teams_list)
@@ -147,15 +156,56 @@ if selected_league:
                 for j in range(max_g):
                     prob_matrix[i, j] = poisson.pmf(i, lambda_home) * poisson.pmf(j, lambda_away)
 
+            # Cálculos de Probabilidades
             prob_over_1_5 = (1 - (prob_matrix[0,0] + prob_matrix[1,0] + prob_matrix[0,1])) * 100
             prob_over_2_5 = (1 - np.sum(np.tril(prob_matrix, 2))) * 100
+            prob_btts = (1 - np.sum(prob_matrix[0, :]) - np.sum(prob_matrix[:, 0]) + prob_matrix[0,0]) * 100
 
+            # Odds Justas (1 / Probabilidade)
+            odd_over_1_5 = 100 / prob_over_1_5 if prob_over_1_5 > 0 else 0
+            odd_over_2_5 = 100 / prob_over_2_5 if prob_over_2_5 > 0 else 0
+            odd_btts = 100 / prob_btts if prob_btts > 0 else 0
+
+            # Cantos
             home_corners = home_games['HC'].mean() + home_games['AC'].mean()
             away_corners = away_games['HC'].mean() + away_games['AC'].mean()
             avg_total_corners = (home_corners + away_corners) / 2
+            estimated_ht_corners = avg_total_corners * 0.45
 
-            st.subheader("📊 Análise do Jogo")
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Probabilidade Over 1.5 Golos", f"{prob_over_1_5:.1f}%")
-            c2.metric("Probabilidade Over 2.5 Golos", f"{prob_over_2_5:.1f}%")
-            c3.metric("Média Estimada de Cantos", f"{avg_total_corners:.1f}")
+            # --- APRESENTAÇÃO DE DADOS NA PÁGINA ---
+            st.markdown("---")
+            st.subheader(f"📊 Análise Estatística: {home_team} vs {away_team}")
+            
+            # Bloco 1: Métricas Principais de Golos
+            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+            col_m1.metric("Média Esperada (Casa)", f"{lambda_home:.2f} golos")
+            col_m2.metric("Média Esperada (Fora)", f"{lambda_away:.2f} golos")
+            col_m3.metric("Golos Totais Esperados", f"{(lambda_home + lambda_away):.2f}")
+            col_m4.metric("Previsão de Cantos (Jogo)", f"{avg_total_corners:.1f}")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Bloco 2: Probabilidades e Odds Justas detalhadas
+            st.markdown("### 🎯 Mercados Principais & Odds Justas")
+            
+            tab1, tab2, tab3 = st.tabs(["⚽ Mercado de Golos", "🚩 Mercado de Cantos", "📈 Resumo de Stake"])
+
+            with tab1:
+                gc1, gc2, gc3 = st.columns(3)
+                gc1.metric("Prob. Over 1.5 Golos", f"{prob_over_1_5:.1f}%", f"Odd Justa: {odd_over_1_5:.2f}")
+                gc2.metric("Prob. Over 2.5 Golos", f"{prob_over_2_5:.1f}%", f"Odd Justa: {odd_over_2_5:.2f}")
+                gc3.metric("Ambas Marcam (BTTS)", f"{prob_btts:.1f}%", f"Odd Justa: {odd_btts:.2f}")
+
+            with tab2:
+                cc1, cc2 = st.columns(2)
+                cc1.metric("Média Cantos 1ª Parte", f"{estimated_ht_corners:.1f}")
+                cc2.metric("Média Cantos Jogo Completo", f"{avg_total_corners:.1f}")
+                st.info("💡 **Dica de Cantos:** Valores acima de 9.5 cantos no total da partida apresentam maior valor histórico nas ligas selecionadas.")
+
+            with tab3:
+                st.write(f"Para uma banca de **{banca_inicial:.2f} €** com uma stake de **{stake_pct}%**, o montante recomendado a investir nesta seleção é de **{valor_stake:.2f} €**.")
+                st.success("✔ Gestão de risco otimizada de acordo com os parâmetros configurados na barra lateral.")
+        else:
+            st.info("ℹ️ Selecione equipas válidas para calcular as estatísticas.")
+    else:
+        st.warning("⚠️ Sem dados disponíveis para esta competição.")
