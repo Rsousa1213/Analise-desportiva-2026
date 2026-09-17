@@ -54,6 +54,7 @@ LEAGUES = {
     "BR Brasileirão (Brasil)": {"url": "https://www.football-data.co.uk/new/BRA.csv", "type": "domestic"},
     "AR Liga Profesional (Argentina)": {"url": "https://www.football-data.co.uk/new/ARG.csv", "type": "domestic"}
 }
+}
 
 TEAMS_CL_2627 = [
     "Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Bayern München", 
