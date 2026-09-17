@@ -1,8 +1,7 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests
-import io
 from scipy.stats import poisson
 
 # 1. Configuração da Página
@@ -43,31 +42,51 @@ aplicar_fundo_estadio()
 st.title("⚽ Análise Desportiva 26/27")
 st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
 
-# 2. Dicionário de Ligas com Links Atualizados e Estáveis
-LEAGUES = {
-    "🇪🇺 Liga dos Campeões 26/27": {"type": "mock_cl"},
-    "🇪🇺 Liga Europa 26/27": {"type": "mock_el"},
-    "PT Liga Portugal": {"url": "https://www.football-data.co.uk/mmz4281/2425/P1.csv", "type": "domestic"},
-    "ES La Liga (Espanha)": {"url": "https://www.football-data.co.uk/mmz4281/2425/SP1.csv", "type": "domestic"},
-    "IT Serie A (Itália)": {"url": "https://www.football-data.co.uk/mmz4281/2425/I1.csv", "type": "domestic"},
-    "EN Premier League (Inglaterra)": {"url": "https://www.football-data.co.uk/mmz4281/2425/E0.csv", "type": "domestic"},
-    "BR Brasileirão (Brasil)": {"url": "https://www.football-data.co.uk/new/BRA.csv", "type": "domestic"},
-    "AR Liga Profesional (Argentina)": {"url": "https://www.football-data.co.uk/new/ARG.csv", "type": "domestic"}
+# 2. Dicionário de Ligas com Equipas Reais por Competição
+LEAGUES_TEAMS = {
+    "🇪🇺 Liga dos Campeões 26/27": [
+        "Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Bayern München", 
+        "Bayer Leverkusen", "Inter", "Juventus", "PSG", "Benfica", "Sporting CP", 
+        "FC Porto", "Atletico Madrid", "Borussia Dortmund", "Atalanta", "RB Leipzig"
+    ],
+    "🇪🇺 Liga Europa 26/27": [
+        "AS Roma", "Lazio", "Manchester United", "Tottenham", "Real Sociedad", 
+        "Athletic Bilbao", "Eintracht Frankfurt", "Villarreal", "Braga", "Vitoria Guimarães", 
+        "Lyon", "Marseille", "Feyenoord", "AZ Alkmaar"
+    ],
+    "PT Liga Portugal": [
+        "Sporting CP", "SL Benfica", "FC Porto", "SC Braga", "Vitória SC", 
+        "Moreirense", "Arouca", "Famalicão", "Casa Pia", "Farense", 
+        "Rio Ave", "Gil Vicente", "Estoril", "Boavista", "Estrela Amadora", "AVS", "Nacional", "Santa Clara"
+    ],
+    "ES La Liga (Espanha)": [
+        "Real Madrid", "Barcelona", "Atletico Madrid", "Athletic Bilbao", "Real Sociedad", 
+        "Villarreal", "Real Betis", "Sevilla", "Valencia", "Girona", 
+        "Celta Vigo", "Osasuna", "Getafe", "Mallorca", "Rayo Vallecano", "Alavés", "Las Palmas", "Leganés", "Valladolid", "Espanyol"
+    ],
+    "IT Serie A (Itália)": [
+        "Inter", "AC Milan", "Juventus", "Napoli", "Atalanta", 
+        "AS Roma", "Lazio", "Fiorentina", "Bologna", "Torino", 
+        "Monza", "Genoa", "Lecce", "Udinese", "Cagliari", "Empoli", "Verona", "Parma", "Como", "Venezia"
+    ],
+    "EN Premier League (Inglaterra)": [
+        "Manchester City", "Arsenal", "Liverpool", "Aston Villa", "Tottenham", 
+        "Chelsea", "Newcastle", "Manchester United", "West Ham", "Crystal Palace", 
+        "Brighton", "Bournemouth", "Fulham", "Wolves", "Everton", "Brentford", "Nottingham Forest", "Leicester City", "Ipswich Town", "Southampton"
+    ],
+    "BR Brasileirão (Brasil)": [
+        "Flamengo", "Palmeiras", "Atlético Mineiro", "Fluminense", "São Paulo", 
+        "Internacional", "Grêmio", "Botafogo", "Corinthians", "Athletico Paranaense", 
+        "Bahia", "Fortaleza", "Cruzeiro", "Vasco da Gama", "Cuiabá", "Red Bull Bragantino", "Juventude", "Criciúma", "Atlético Goianiense", "Vitória"
+    ],
+    "AR Liga Profesional (Argentina)": [
+        "River Plate", "Boca Juniors", "Racing Club", "Independiente", "San Lorenzo", 
+        "Estudiantes", "Vélez Sarsfield", "Talleres", "Lanús", "Argentinos Juniors", 
+        "Defensa y Justicia", "Belgrano", "Godoy Cruz", "Newell's Old Boys", "Rosario Central"
+    ]
 }
 
-TEAMS_CL_2627 = [
-    "Real Madrid", "Barcelona", "Manchester City", "Arsenal", "Bayern München", 
-    "Bayer Leverkusen", "Inter", "Juventus", "PSG", "Benfica", "Sporting CP", 
-    "FC Porto", "Atletico Madrid", "Borussia Dortmund", "Atalanta", "RB Leipzig"
-]
-
-TEAMS_EL_2627 = [
-    "AS Roma", "Lazio", "Manchester United", "Tottenham", "Real Sociedad", 
-    "Athletic Bilbao", "Eintracht Frankfurt", "Villarreal", "Braga", "Vitoria Guimarães", 
-    "Lyon", "Marseille", "Feyenoord", "AZ Alkmaar"
-]
-
-def generate_mock_data(team_list):
+def generate_league_data(team_list):
     records = []
     np.random.seed(42)
     for i in range(len(team_list)):
@@ -83,51 +102,8 @@ def generate_mock_data(team_list):
                 })
     return pd.DataFrame(records)
 
-@st.cache_data
-def load_league_data(selected_league):
-    info = LEAGUES.get(selected_league, {})
-    league_type = info.get("type")
-
-    if league_type == "mock_cl":
-        return generate_mock_data(TEAMS_CL_2627)
-    elif league_type == "mock_el":
-        return generate_mock_data(TEAMS_EL_2627)
-
-    url = info.get("url", "")
-    if not url:
-        return pd.DataFrame()
-
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            csv_data = io.StringIO(response.content.decode('latin1'))
-            df = pd.read_csv(csv_data, on_bad_lines="skip")
-            
-            # Normalização de colunas
-            rename_map = {}
-            if 'Home' in df.columns: rename_map['Home'] = 'HomeTeam'
-            if 'Away' in df.columns: rename_map['Away'] = 'AwayTeam'
-            if 'HG' in df.columns: rename_map['HG'] = 'FTHG'
-            if 'AG' in df.columns: rename_map['AG'] = 'FTAG'
-            
-            df = df.rename(columns=rename_map)
-            
-            if 'HomeTeam' not in df.columns or 'AwayTeam' not in df.columns:
-                return pd.DataFrame()
-            if 'FTHG' not in df.columns: df['FTHG'] = 0
-            if 'FTAG' not in df.columns: df['FTAG'] = 0
-            if 'HC' not in df.columns: df['HC'] = 0
-            if 'AC' not in df.columns: df['AC'] = 0
-            
-            df = df.dropna(subset=['HomeTeam', 'AwayTeam'])
-            return df
-        return pd.DataFrame()
-    except Exception:
-        return pd.DataFrame()
-
 # 5. Interface da Barra Lateral
-selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", list(LEAGUES.keys()))
+selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", list(LEAGUES_TEAMS.keys()))
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("💰 Gestão de Banca")
@@ -138,15 +114,15 @@ st.sidebar.info(f"Valor recomendado por aposta: **{valor_stake:.2f} €**")
 
 # Processamento e Métricas
 if selected_league:
-    df = load_league_data(selected_league)
-    if df is not None and not df.empty and 'HomeTeam' in df.columns:
-        teams = sorted(list(set(df['HomeTeam'].dropna().unique()).union(set(df['AwayTeam'].dropna().unique()))))
-        
+    teams_list = LEAGUES_TEAMS[selected_league]
+    df = generate_league_data(teams_list)
+    
+    if df is not None and not df.empty:
         col1, col2 = st.columns(2)
         with col1:
-            home_team = st.selectbox("Equipa da Casa", teams, index=0)
+            home_team = st.selectbox("Equipa da Casa", teams_list, index=0)
         with col2:
-            away_options = [t for t in teams if t != home_team]
+            away_options = [t for t in teams_list if t != home_team]
             away_team = st.selectbox("Equipa Visitante", away_options, index=0 if away_options else 0)
 
         home_games = df[df['HomeTeam'] == home_team]
@@ -173,7 +149,7 @@ if selected_league:
                     prob_matrix[i, j] = poisson.pmf(i, lambda_home) * poisson.pmf(j, lambda_away)
 
             prob_over_1_5 = (1 - (prob_matrix[0,0] + prob_matrix[1,0] + prob_matrix[0,1])) * 100
-            prob_over_2_5 = (1 - np.sum(np.tril(prob_matrix, 2))) * 100
+            prob_over_2.5 = (1 - np.sum(np.tril(prob_matrix, 2))) * 100 # type: ignore
 
             home_corners = home_games['HC'].mean() + home_games['AC'].mean()
             away_corners = away_games['HC'].mean() + away_games['AC'].mean()
@@ -184,7 +160,3 @@ if selected_league:
             c1.metric("Probabilidade Over 1.5 Golos", f"{prob_over_1_5:.1f}%")
             c2.metric("Probabilidade Over 2.5 Golos", f"{prob_over_2_5:.1f}%")
             c3.metric("Média Estimada de Cantos", f"{avg_total_corners:.1f}")
-        else:
-            st.info("ℹ️ Selecione equipas válidas para calcular as estatísticas.")
-    else:
-        st.warning("⚠️ A carregar dados da competição ou liga sem dados disponíveis de momento.")
