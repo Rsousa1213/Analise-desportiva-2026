@@ -194,22 +194,56 @@ def generate_mock_european_data(is_champions=True):
 # --- CARREGAR DADOS HISTÓRICOS E LISTA COMPLETA DE EQUIPAS ---
 @st.cache_data
 def load_league_data(league_info):
-    url = league_info["url"]
+    raw_url = league_info["url"]
+    
+    # 1. Limpeza e correção absoluta da URL (elimina erros de 127.0.0.1 e URLs duplicadas)
+    if "http" in raw_url:
+        # Extrai a URL limpa a partir do http
+        url = "http" + raw_url.split("http")[-1]
+    else:
+        url = f"https://www.football-data.co.uk/{raw_url.lstrip('/')}"
 
-    # 1. Competicaos europeias (UEFA)
+    # 2. Competições europeias (UEFA - mock de reserva)
     if "CL.csv" in url or "EL.csv" in url:
         try:
-            df = pd.read_csv(url, encoding="latin1", on_bad_lines="skip")
-            if df.empty or "HomeTeam" not in df.columns:
-                return generate_mock_european_data("CL.csv" in url)
-            return df
+            import requests, io
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            res = requests.get(url, headers=headers, timeout=10)
+            if res.status_code == 200:
+                df = pd.read_csv(io.StringIO(res.content.decode('latin1')), on_bad_lines="skip")
+                if not df.empty and "HomeTeam" in df.columns:
+                    return df
+            return generate_mock_european_data("CL.csv" in url)
         except Exception:
             return generate_mock_european_data("CL.csv" in url)
 
-   # 2. Ligas Sul-Americanas, Asiáticas e Domésticas Europeias
+    # 3. Ligas Domésticas (Europa, Japão, Sul-América)
     try:
-        import requests
-        import io
+        import requests, io
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            df = pd.read_csv(io.StringIO(response.content.decode('latin1')), on_bad_lines="skip")
+            
+            # Normalização de colunas universais
+            column_mapping = {'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'}
+            df = df.rename(columns=column_mapping)
+            
+            # Preenchimento de segurança para cantos em ligas sem esses dados
+            if 'HC' not in df.columns:
+                df['HC'] = 0
+            if 'AC' not in df.columns:
+                df['AC'] = 0
+                
+            return df
+        else:
+            st.error(f"Erro HTTP {response.status_code} ao aceder à URL.")
+            return pd.DataFrame()
+            
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}")
+        return pd.DataFrame()
         
         # Garante que a URL é absoluta e não relativa (evita o erro do 127.0.0.1)
         if not url.startswith("http"):
