@@ -131,11 +131,7 @@ LEAGUES = {
         "url_prev": "https://www.football-data.co.uk/new/ARG.csv",
         "api_key": "soccer_argentina_primera_division"
     },
-    "JP J1 League (Japão)": {
-        "url": "https://www.football-data.co.uk/mmz4281/JPN.csv",
-        "url_prev": "https://www.football-data.co.uk/mmz4281/JPN.csv",
-        "api_key": "soccer_japan_j_league"
-    }
+    
 }
 
 # --- SIDEBAR: CONFIGURAÇÕES E API KEY ---
@@ -194,9 +190,33 @@ def generate_mock_european_data(is_champions=True):
 # --- CARREGAR DADOS HISTÓRICOS E LISTA COMPLETA DE EQUIPAS ---
 @st.cache_data
 def load_league_data(selected_league):
-    url = LEAGUE_URLS.get(selected_league)
-    if not url:
+    league_info = LEAGUES.get(selected_league)
+    if not league_info:
         return pd.DataFrame()
+
+    # Extrai a URL do dicionário
+    url = league_info["url"] if isinstance(league_info, dict) else league_info
+
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            csv_data = io.StringIO(response.content.decode('latin1'))
+            df = pd.read_csv(csv_data, on_bad_lines="skip")
+            
+            column_mapping = {'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'}
+            df = df.rename(columns=column_mapping)
+            
+            if 'HC' not in df.columns:
+                df['HC'] = 0
+            if 'AC' not in df.columns:
+                df['AC'] = 0
+                
+            return df
+        else:
+            st.error(f"Erro HTTP {response.status_code} ao aceder à URL")
+            return pd.DataFrame()
 
     # Garante que a URL tem o protocolo correto se for relativa
     if isinstance(url, str) and not url.startswith("http"):
