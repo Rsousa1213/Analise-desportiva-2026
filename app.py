@@ -197,10 +197,17 @@ def load_league_data(league_info):
     raw_url = league_info["url"] if isinstance(league_info, dict) else league_info
     
     # Garantir que a URL é SEMPRE absoluta e aponta para o site oficial
+   raw_url = LEAGUE_URLS.get(selected_league, "")
+    
+    # Se for uma lista de URLs, pega na primeira
+    if isinstance(raw_url, list):
+        raw_url = raw_url[0] if raw_url else ""
+
+    # Garante a construção do URL absoluto
     if raw_url.startswith("http"):
         url = raw_url
     else:
-        clean_path = raw_url.lstrip("/")
+        clean_path = str(raw_url).lstrip("/")
         url = f"https://www.football-data.co.uk/{clean_path}"
 
     # 1. Competições europeias (UEFA)
