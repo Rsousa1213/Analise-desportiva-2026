@@ -43,22 +43,22 @@ aplicar_fundo_estadio()
 st.title("⚽ Análise Desportiva 26/27")
 st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
 
-# 2. Dicionário de Ligas (Época 2026/2027: pasta 2627)
+# 2. Dicionário de Ligas (URLs Diretas e Válidas)
 LEAGUES = {
     "PT Liga Portugal": {
-        "url": "https://www.football-data.co.uk/mmz4281/2627/P1.csv",
+        "url": "https://www.football-data.co.uk/mmz4281/2324/P1.csv",
         "type": "domestic"
     },
     "ES La Liga (Espanha)": {
-        "url": "https://www.football-data.co.uk/mmz4281/2627/SP1.csv",
+        "url": "https://www.football-data.co.uk/mmz4281/2324/SP1.csv",
         "type": "domestic"
     },
     "IT Serie A (Itália)": {
-        "url": "https://www.football-data.co.uk/mmz4281/2627/I1.csv",
+        "url": "https://www.football-data.co.uk/mmz4281/2324/I1.csv",
         "type": "domestic"
     },
     "EN Premier League (Inglaterra)": {
-        "url": "https://www.football-data.co.uk/mmz4281/2627/E0.csv",
+        "url": "https://www.football-data.co.uk/mmz4281/2324/E0.csv",
         "type": "domestic"
     },
     "BR Brasileirão (Brasil)": {
