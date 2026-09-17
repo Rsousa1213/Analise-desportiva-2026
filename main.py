@@ -50,7 +50,7 @@ aplicar_estilo_visual()
 st.title("⚽ Análise Desportiva 26/27")
 st.markdown("Análise Avançada com Foco em **Over 1.5 & Over 2.5 Golos** & **Over 7.5 Cantos**")
 
-# 2. Dicionário de Ligas com Equipas Reais (Incluindo Copa Libertadores)
+# 2. Dicionário de Ligas com Equipas Reais (Com Ligue 1 Francesa incluída)
 LEAGUES_TEAMS = {
     "🏆 Copa Libertadores": [
         "Flamengo", "Palmeiras", "Atlético Mineiro", "Fluminense", "São Paulo", 
@@ -86,6 +86,11 @@ LEAGUES_TEAMS = {
         "Manchester City", "Arsenal", "Liverpool", "Aston Villa", "Tottenham", 
         "Chelsea", "Newcastle", "Manchester United", "West Ham", "Crystal Palace", 
         "Brighton", "Bournemouth", "Fulham", "Wolves", "Everton", "Brentford", "Nottingham Forest", "Leicester City", "Ipswich Town", "Southampton"
+    ],
+    "FR Ligue 1 (França)": [
+        "PSG", "Monaco", "Marseille", "Lille", "Lyon", 
+        "Nice", "Lens", "Brest", "Rennes", "Strasbourg", 
+        "Toulouse", "Reims", "Montpellier", "Nantes", "Le Havre", "Auxerre", "Angers", "Saint-Étienne"
     ],
     "BR Brasileirão (Brasil)": [
         "Flamengo", "Palmeiras", "Atlético Mineiro", "Fluminense", "São Paulo", 
