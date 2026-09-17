@@ -48,7 +48,7 @@ def aplicar_estilo_visual():
 aplicar_estilo_visual()
 
 st.title("⚽ Análise Desportiva 26/27")
-st.markdown("Análise Avançada para **Mercado de Golos, BTTS & Cantos** com Odds Automáticas")
+st.markdown("Análise Avançada para **Mercado de Golos, BTTS & Cantos** com Comparador de Value Bets")
 
 # 2. Dicionário de Ligas com Equipas Reais
 LEAGUES_TEAMS = {
@@ -156,12 +156,12 @@ if selected_league:
                 for j in range(max_g):
                     prob_matrix[i, j] = poisson.pmf(i, lambda_home) * poisson.pmf(j, lambda_away)
 
-            # Cálculos de Probabilidades
+            # Probabilidades
             prob_over_1_5 = (1 - (prob_matrix[0,0] + prob_matrix[1,0] + prob_matrix[0,1])) * 100
             prob_over_2_5 = (1 - np.sum(np.tril(prob_matrix, 2))) * 100
             prob_btts = (1 - np.sum(prob_matrix[0, :]) - np.sum(prob_matrix[:, 0]) + prob_matrix[0,0]) * 100
 
-            # Odds Justas (1 / Probabilidade)
+            # Odds Justas
             odd_over_1_5 = 100 / prob_over_1_5 if prob_over_1_5 > 0 else 0
             odd_over_2_5 = 100 / prob_over_2_5 if prob_over_2_5 > 0 else 0
             odd_btts = 100 / prob_btts if prob_btts > 0 else 0
@@ -172,22 +172,18 @@ if selected_league:
             avg_total_corners = (home_corners + away_corners) / 2
             estimated_ht_corners = avg_total_corners * 0.45
 
-            # --- APRESENTAÇÃO DE DADOS NA PÁGINA ---
+            # --- APRESENTAÇÃO DE DADOS ---
             st.markdown("---")
             st.subheader(f"📊 Análise Estatística: {home_team} vs {away_team}")
             
-            # Bloco 1: Métricas Principais de Golos
             col_m1, col_m2, col_m3, col_m4 = st.columns(4)
             col_m1.metric("Média Esperada (Casa)", f"{lambda_home:.2f} golos")
             col_m2.metric("Média Esperada (Fora)", f"{lambda_away:.2f} golos")
             col_m3.metric("Golos Totais Esperados", f"{(lambda_home + lambda_away):.2f}")
-            col_m4.metric("Previsão de Cantos (Jogo)", f"{avg_total_corners:.1f}")
+            col_m4.metric("Previsão de Cantos", f"{avg_total_corners:.1f}")
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # Bloco 2: Probabilidades e Odds Justas detalhadas
-            st.markdown("### 🎯 Mercados Principais & Odds Justas")
-            
             tab1, tab2, tab3 = st.tabs(["⚽ Mercado de Golos", "🚩 Mercado de Cantos", "📈 Resumo de Stake"])
 
             with tab1:
@@ -200,11 +196,60 @@ if selected_league:
                 cc1, cc2 = st.columns(2)
                 cc1.metric("Média Cantos 1ª Parte", f"{estimated_ht_corners:.1f}")
                 cc2.metric("Média Cantos Jogo Completo", f"{avg_total_corners:.1f}")
-                st.info("💡 **Dica de Cantos:** Valores acima de 9.5 cantos no total da partida apresentam maior valor histórico nas ligas selecionadas.")
 
             with tab3:
-                st.write(f"Para uma banca de **{banca_inicial:.2f} €** com uma stake de **{stake_pct}%**, o montante recomendado a investir nesta seleção é de **{valor_stake:.2f} €**.")
-                st.success("✔ Gestão de risco otimizada de acordo com os parâmetros configurados na barra lateral.")
+                st.write(f"Banca: **{banca_inicial:.2f} €** | Stake ({stake_pct}%): **{valor_stake:.2f} €**")
+
+            # --- TABELA COMPARATIVA DE VALUE BETS ---
+            st.markdown("---")
+            st.subheader("🎯 Comparador de Value Bets & Odds Reais")
+            st.markdown("Insere a **Odd praticada pela tua Casa de Apostas** para verificar se existe valor matemático (Edge > 0%).")
+
+            # Inputs para o utilizador colocar as odds da casa de apostas
+            bc1, bc2, bc3 = st.columns(3)
+            with bc1:
+                bookie_odd_o15 = st.number_input("Odd Casa (Over 1.5)", min_value=1.01, max_value=10.0, value=round(odd_over_1_5 + 0.1, 2), step=0.01)
+            with bc2:
+                bookie_odd_o25 = st.number_input("Odd Casa (Over 2.5)", min_value=1.01, max_value=20.0, value=round(odd_over_2_5 + 0.15, 2), step=0.01)
+            with bc3:
+                bookie_odd_btts = st.number_input("Odd Casa (BTTS)", min_value=1.01, max_value=15.0, value=round(odd_btts + 0.1, 2), step=0.01)
+
+            # Cálculo de Valor / Edge (%) = (Probabilidade do Modelo * Odd da Casa) - 1
+            edge_o15 = ((prob_over_1_5 / 100) * bookie_odd_o15 - 1) * 100
+            edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
+            edge_btts = ((prob_btts / 100) * bookie_odd_btts - 1) * 100
+
+            # Montagem da Tabela Resumo
+            tabela_dados = [
+                {
+                    "Mercado": "Over 1.5 Golos",
+                    "Probabilidade": f"{prob_over_1_5:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_over_1_5:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_o15:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_o15:+.2f}%",
+                    "Recomendação": "🔥 VALOR" if edge_o15 > 0 else "❌ Sem Valor"
+                },
+                {
+                    "Mercado": "Over 2.5 Golos",
+                    "Probabilidade": f"{prob_over_2_5:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_over_2_5:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_o25:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_o25:+.2f}%",
+                    "Recomendação": "🔥 VALOR" if edge_o25 > 0 else "❌ Sem Valor"
+                },
+                {
+                    "Mercado": "Ambas Marcam (BTTS)",
+                    "Probabilidade": f"{prob_btts:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_btts:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_btts:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_btts:+.2f}%",
+                    "Recomendação": "🔥 VALOR" if edge_btts > 0 else "❌ Sem Valor"
+                }
+            ]
+
+            df_tabela = pd.DataFrame(tabela_dados)
+            st.dataframe(df_tabela, use_container_width=True, hide_index=True)
+
         else:
             st.info("ℹ️ Selecione equipas válidas para calcular as estatísticas.")
     else:
