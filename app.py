@@ -194,31 +194,8 @@ def load_league_data(selected_league):
     if not league_info:
         return pd.DataFrame()
 
-    # Extrai a URL do dicionário
     url = league_info["url"] if isinstance(league_info, dict) else league_info
 
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        response = requests.get(url, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            csv_data = io.StringIO(response.content.decode('latin1'))
-            df = pd.read_csv(csv_data, on_bad_lines="skip")
-            
-            column_mapping = {'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'}
-            df = df.rename(columns=column_mapping)
-            
-            if 'HC' not in df.columns:
-                df['HC'] = 0
-            if 'AC' not in df.columns:
-                df['AC'] = 0
-                
-            return df
-        else:
-            st.error(f"Erro HTTP {response.status_code} ao aceder à URL")
-            return pd.DataFrame()
-
-    # Garante que a URL tem o protocolo correto se for relativa
     if isinstance(url, str) and not url.startswith("http"):
         url = f"https://www.football-data.co.uk/{url.lstrip('/')}"
 
@@ -230,7 +207,6 @@ def load_league_data(selected_league):
             csv_data = io.StringIO(response.content.decode('latin1'))
             df = pd.read_csv(csv_data, on_bad_lines="skip")
             
-            # Normalização simples de colunas
             column_mapping = {'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'}
             df = df.rename(columns=column_mapping)
             
@@ -246,7 +222,8 @@ def load_league_data(selected_league):
             
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
-        return pd.DataFrame()      
+        return pd.DataFrame()
+                    
 df = load_league_data(selected_league)
 
 if df is not None and not df.empty:
