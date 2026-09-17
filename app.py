@@ -206,10 +206,27 @@ def load_league_data(league_info):
         except Exception:
             return generate_mock_european_data("CL.csv" in url)
 
-    # 2. Ligas Sul-Americanas (Brasil / Argentina) e Domesticas Europeias
+   # 2. Ligas Sul-Americanas, Asiáticas e Domésticas Europeias
     try:
-        df = pd.read_csv(url, encoding="latin1", on_bad_lines="skip")
-
+        import urllib.request
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
+        df = pd.read_csv(req, encoding="latin1", on_bad_lines="skip")
+        
+        column_mapping = {'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'}
+        df = df.rename(columns=column_mapping)
+        
+        if 'HC' not in df.columns:
+            df['HC'] = 0
+        if 'AC' not in df.columns:
+            df['AC'] = 0
+            
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}")
+        return pd.DataFrame()
         # Mapeamento de colunas para Brasil / Argentina
         rename_map = {
             "Home": "HomeTeam",
