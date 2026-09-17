@@ -43,7 +43,7 @@ aplicar_fundo_estadio()
 st.title("⚽ Análise Desportiva 26/27")
 st.markdown("Análise focada no **Mercado de Golos (Over 1.5 Pré-Live & Over 2.5)** e **Cantos** com Odds Automáticas")
 
-# 2. Dicionário de Ligas (URLs Diretas e Válidas)
+# 2. Dicionário de Ligas (URLs Diretas e Testadas)
 LEAGUES = {
     "PT Liga Portugal": {
         "url": "https://www.football-data.co.uk/mmz4281/2324/P1.csv",
@@ -149,9 +149,13 @@ def load_league_data(selected_league):
         return pd.DataFrame()
 
 # 5. Interface de Seleção
-selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", list(LEAGUES.keys()))
+league_options = ["-- Selecione uma Liga --"] + list(LEAGUES.keys())
+selected_league = st.sidebar.selectbox("Selecione a Liga / Competição:", league_options)
 
-df = load_league_data(selected_league)
+if selected_league != "-- Selecione uma Liga --":
+    df = load_league_data(selected_league)
+else:
+    df = pd.DataFrame()
 
 if df is not None and not df.empty and 'HomeTeam' in df.columns:
     teams = sorted(list(set(df['HomeTeam'].dropna().unique()).union(set(df['AwayTeam'].dropna().unique()))))
