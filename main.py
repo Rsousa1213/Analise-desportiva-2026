@@ -10,9 +10,49 @@ st.set_page_config(
     layout="wide",
 )
 
+# --- CSS Personalizado para Garantir Fundo Escuro ---
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+Se quiseres o código completo já com o fundo escuro integrado:
+Python
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+import streamlit as st
+
+# --- Configuração da Página ---
+st.set_page_config(
+    page_title="Modelo de Value Bets & Poisson",
+    page_icon="⚽",
+    layout="wide",
+)
+
+# --- CSS Personalizado para Fundo Escuro ---
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("🎯 Calculadora de Value Bets & Stake Dinâmica")
 st.markdown(
-    "Insere as estatísticas e as odds da tua Casa de Apostas para calcular o Edge (+EV)."
+    "Insere as estatísticas e as odds da tua Casa de Apostas para calcular o"
+    " Edge (+EV)."
 )
 
 # --- Barra Lateral para Inputs do Jogo ---
@@ -54,47 +94,47 @@ st.markdown("### 📋 Insere as Odds da tua Casa de Apostas")
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 with col1:
-    odd_casa_o15 = st.number_input(
-        "Odd Casa (Over 1.5)",
-        1.01,
-        50.0,
-        float(np.clip(round(odd_justa_15 + 0.1, 2), 1.01, 50.0)),
-    )
+  odd_casa_o15 = st.number_input(
+      "Odd Casa (Over 1.5)",
+      1.01,
+      50.0,
+      float(np.clip(round(odd_justa_15 + 0.1, 2), 1.01, 50.0)),
+  )
 with col2:
-    odd_casa_o25 = st.number_input(
-        "Odd Casa (Over 2.5)",
-        1.01,
-        50.0,
-        float(np.clip(round(odd_justa_25 + 0.1, 2), 1.01, 50.0)),
-    )
+  odd_casa_o25 = st.number_input(
+      "Odd Casa (Over 2.5)",
+      1.01,
+      50.0,
+      float(np.clip(round(odd_justa_25 + 0.1, 2), 1.01, 50.0)),
+  )
 with col3:
-    odd_casa_o35 = st.number_input(
-        "Odd Casa (Over 3.5)",
-        1.01,
-        50.0,
-        float(np.clip(round(odd_justa_35 + 0.1, 2), 1.01, 50.0)),
-    )
+  odd_casa_o35 = st.number_input(
+      "Odd Casa (Over 3.5)",
+      1.01,
+      50.0,
+      float(np.clip(round(odd_justa_35 + 0.1, 2), 1.01, 50.0)),
+  )
 with col4:
-    odd_casa_u55 = st.number_input(
-        "Odd Casa (Under 5.5)",
-        1.01,
-        50.0,
-        float(np.clip(round(odd_justa_u55 + 0.1, 2), 1.01, 50.0)),
-    )
+  odd_casa_u55 = st.number_input(
+      "Odd Casa (Under 5.5)",
+      1.01,
+      50.0,
+      float(np.clip(round(odd_justa_u55 + 0.1, 2), 1.01, 50.0)),
+  )
 with col5:
-    odd_casa_cantos = st.number_input(
-        "Odd Casa (Cantos 7.5)",
-        1.01,
-        50.0,
-        float(np.clip(round(odd_justa_cantos + 0.1, 2), 1.01, 50.0)),
-    )
+  odd_casa_cantos = st.number_input(
+      "Odd Casa (Cantos 7.5)",
+      1.01,
+      50.0,
+      float(np.clip(round(odd_justa_cantos + 0.1, 2), 1.01, 50.0)),
+  )
 with col6:
-    odd_casa_u145 = st.number_input(
-        "Odd Casa (Cantos 14.5)",
-        1.01,
-        50.0,
-        float(np.clip(round(odd_justa_u145 + 0.1, 2), 1.01, 50.0)),
-    )
+  odd_casa_u145 = st.number_input(
+      "Odd Casa (Cantos 14.5)",
+      1.01,
+      50.0,
+      float(np.clip(round(odd_justa_u145 + 0.1, 2), 1.01, 50.0)),
+  )
 
 
 # Função de cálculo de Value Bet e Stake Dinâmica
@@ -109,7 +149,7 @@ def avaliar_mercado(prob, odd_justa, odd_casa):
   return edge * 100, stake, recomendacion
 
 
-# Calcular resultados individuais de forma limpa
+# Calcular resultados individuais
 res_15 = avaliar_mercado(prob_over_15, odd_justa_15, odd_casa_o15)
 res_25 = avaliar_mercado(prob_over_25, odd_justa_25, odd_casa_o25)
 res_35 = avaliar_mercado(prob_over_35, odd_justa_35, odd_casa_o35)
