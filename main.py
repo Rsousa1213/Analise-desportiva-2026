@@ -29,12 +29,29 @@ st.markdown(
     " Edge (+EV)."
 )
 
-# --- Barra Lateral para Inputs do Jogo e Banca ---
+# --- Barra Lateral para Configuração, Ligas e Parâmetros ---
 st.sidebar.header("⚙️ Configuração da Aposta")
 
 # Banca Total
 banca_total = st.sidebar.number_input(
     "Valor Total da Banca (€)", 10.0, 10000.0, 100.0, 10.0
+)
+
+st.sidebar.markdown("---")
+st.sidebar.header("🌍 Seleção de Competição")
+
+# Seletor de Ligas
+liga_selecionada = st.sidebar.selectbox(
+    "Seleciona a Liga",
+    [
+        "🇵🇹 Liga Portugal Betclic",
+        "🇪🇸 La Liga (Espanha)",
+        "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League (Inglaterra)",
+        "🇩🇪 DE Bundesliga (Alemanha)",
+        "🇮🇹 Serie A (Itália)",
+        "🇧🇷 Brasileirão Série A",
+        "Outra / Amigável",
+    ],
 )
 
 st.sidebar.markdown("---")
@@ -53,8 +70,13 @@ cantos_esperados = st.sidebar.number_input(
     "Média Total de Cantos Esperados", 0.0, 20.0, 9.5, 0.5
 )
 
-# --- Título Dinâmico do Jogo ---
-st.markdown(f"### 🆚 Análise para o Jogo: **{equipa_casa} vs {equipa_fora}**")
+# --- Título Dinâmico do Jogo no Ecrã Principal ---
+st.markdown(
+    f"### 🏆 Competição: **{liga_selecionada}**"
+)
+st.markdown(
+    f"### 🆚 Análise para o Jogo: **{equipa_casa} vs {equipa_fora}**"
+)
 
 # --- Cálculos Estatísticos (Modelo de Poisson) ---
 lambda_golos = xg_casa + xg_fora
@@ -130,7 +152,6 @@ with col6:
 def avaliar_mercado(prob, odd_justa, odd_casa, banca):
   edge = (odd_casa / odd_justa) - 1.0
   if edge > 0:
-    # Stake proporcional ao edge e à banca total (ex: 1% a 5% da banca ajustado ao EV)
     stake = round(banca * min(0.05, max(0.005, edge * 0.1)), 2)
     recomendacion = "🔥 VALOR"
   else:
@@ -139,7 +160,7 @@ def avaliar_mercado(prob, odd_justa, odd_casa, banca):
   return edge * 100, stake, recomendacion
 
 
-# Calcular resultados individuais usando o valor da banca
+# Calcular resultados individuais
 res_15 = avaliar_mercado(prob_over_15, odd_justa_15, odd_casa_o15, banca_total)
 res_25 = avaliar_mercado(prob_over_25, odd_justa_25, odd_casa_o25, banca_total)
 res_35 = avaliar_mercado(prob_over_35, odd_justa_35, odd_casa_o35, banca_total)
