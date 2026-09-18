@@ -51,7 +51,7 @@ st.markdown(
     "Análise Avançada com Foco em **Over/Under Golos & Cantos**"
 )
 
-# 2. Dicionário de Ligas com Equipas Reais
+# 2. Dicionário de Ligas com Equipas Reais (Série B Adicionada)
 LEAGUES_TEAMS = {
     "🏆 Copa Libertadores": [
         "Flamengo",
@@ -252,6 +252,28 @@ LEAGUES_TEAMS = {
         "Criciúma",
         "Atlético Goianiense",
         "Vitória",
+    ],
+    "BR Série B (Brasil)": [
+        "Santos",
+        "América Mineiro",
+        "Coritiba",
+        "Goiás",
+        "Sport",
+        "Ceará",
+        "Novorizontino",
+        "Vila Nova",
+        "Mirassol",
+        "CRB",
+        "Amazonas",
+        "Operário-PR",
+        "Ponte Preta",
+        "Guarani",
+        "Brusque",
+        "Ituano",
+        "Chapecoense",
+        "Botafogo-SP",
+        "Paysandu",
+        "JsonResponse",
     ],
     "AR Liga Profesional (Argentina)": [
         "River Plate",
@@ -517,7 +539,7 @@ if selected_league:
             step=0.01,
         )
 
-      # Cálculo de Edge / Valor (%) - Correção de prob_under_5_5
+      # Cálculo de Edge / Valor (%)
       edge_o15 = ((prob_over_1_5 / 100) * bookie_odd_o15 - 1) * 100
       edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
       edge_u55 = ((prob_under_5_5) * bookie_odd_u55 - 1) * 100
