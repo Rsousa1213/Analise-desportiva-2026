@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import scipy.stats as stats
 import streamlit as st
 
@@ -33,13 +34,11 @@ lambda_golos = xg_casa + xg_fora
 prob_over_15 = 1.0 - stats.poisson.cdf(1, lambda_golos)
 prob_over_25 = 1.0 - stats.poisson.cdf(2, lambda_golos)
 prob_over_35 = 1.0 - stats.poisson.cdf(3, lambda_golos)
-prob_under_55 = stats.poisson.cdf(5, lambda_golos)  # Novo Under 5.5
+prob_under_55 = stats.poisson.cdf(5, lambda_golos)
 
-# Probabilidades de Cantos (Over / Under com aproximação de Poisson)
-prob_over_cantos = 1.0 - stats.poisson.cdf(
-    7, cantos_esperados
-)  # Over 7.5 Cantos
-prob_under_cantos = stats.poisson.cdf(14, cantos_esperados)  # Novo Under 14.5
+# Probabilidades de Cantos (Over / Under)
+prob_over_cantos = 1.0 - stats.poisson.cdf(7, cantos_esperados)
+prob_under_cantos = stats.poisson.cdf(14, cantos_esperados)
 
 # Conversão em Odds Justas
 odd_justa_15 = 1.0 / prob_over_15 if prob_over_15 > 0 else 99.0
@@ -102,7 +101,6 @@ with col6:
 def avaliar_mercado(prob, odd_justa, odd_casa):
   edge = (odd_casa / odd_justa) - 1.0
   if edge > 0:
-    # Stake base proporcional ao edge (exemplo de lógica dinâmica)
     stake = round(max(1.0, edge * 30), 2)
     recomendacion = "🔥 VALOR"
   else:
@@ -111,85 +109,81 @@ def avaliar_mercado(prob, odd_justa, odd_casa):
   return edge * 100, stake, recomendacion
 
 
+# Calcular resultados individuais de forma limpa
+res_15 = avaliar_mercado(prob_over_15, odd_justa_15, odd_casa_o15)
+res_25 = avaliar_mercado(prob_over_25, odd_justa_25, odd_casa_o25)
+res_35 = avaliar_mercado(prob_over_35, odd_justa_35, odd_casa_o35)
+res_u55 = avaliar_mercado(prob_under_55, odd_justa_u55, odd_casa_u55)
+res_cantos = avaliar_mercado(prob_over_cantos, odd_justa_cantos, odd_casa_cantos)
+res_u145 = avaliar_mercado(prob_under_cantos, odd_justa_u145, odd_casa_u145)
+
 # Compilação dos dados para a tabela
 mercados = [
     {
-        "Mercado": "Over 1.5 Golos",
-        "Prob": f"{prob_over_15*100:.1f}%",
-        "Odd Justa": round(odd_justa_15, 2),
-        "Odd Casa": odd_casa_o15,
-        *zip(
-            ["Edge", "Stake", "Rec"], avaliar_mercado(prob_over_15, odd_justa_15, odd_casa_o15)
-        ),
+        "Mercado Base": "Over 1.5 Golos",
+        "Probabilidade": f"{prob_over_15*100:.1f}%",
+        "Odd Justa (Modelo)": round(odd_justa_15, 2),
+        "Odd Casa de Apostas": odd_casa_o15,
+        "Valor (+EV / Edge)": res_15[0],
+        "Aposta Dinâmica": res_15[1],
+        "Recomendação": res_15[2],
     },
     {
-        "Mercado": "Over 2.5 Golos",
-        "Prob": f"{prob_over_25*100:.1f}%",
-        "Odd Justa": round(odd_justa_25, 2),
-        "Odd Casa": odd_casa_o25,
-        *zip(
-            ["Edge", "Stake", "Rec"], avaliar_mercado(prob_over_25, odd_justa_25, odd_casa_o25)
-        ),
+        "Mercado Base": "Over 2.5 Golos",
+        "Probabilidade": f"{prob_over_25*100:.1f}%",
+        "Odd Justa (Modelo)": round(odd_justa_25, 2),
+        "Odd Casa de Apostas": odd_casa_o25,
+        "Valor (+EV / Edge)": res_25[0],
+        "Aposta Dinâmica": res_25[1],
+        "Recomendação": res_25[2],
     },
     {
-        "Mercado": "Over 3.5 Golos",
-        "Prob": f"{prob_over_35*100:.1f}%",
-        "Odd Justa": round(odd_justa_35, 2),
-        "Odd Casa": odd_casa_o35,
-        *zip(
-            ["Edge", "Stake", "Rec"], avaliar_mercado(prob_over_35, odd_justa_35, odd_casa_o35)
-        ),
+        "Mercado Base": "Over 3.5 Golos",
+        "Probabilidade": f"{prob_over_35*100:.1f}%",
+        "Odd Justa (Modelo)": round(odd_justa_35, 2),
+        "Odd Casa de Apostas": odd_casa_o35,
+        "Valor (+EV / Edge)": res_35[0],
+        "Aposta Dinâmica": res_35[1],
+        "Recomendação": res_35[2],
     },
     {
-        "Mercado": "Under 5.5 Golos",
-        "Prob": f"{prob_under_55*100:.1f}%",
-        "Odd Justa": round(odd_justa_u55, 2),
-        "Odd Casa": odd_casa_u55,
-        *zip(
-            ["Edge", "Stake", "Rec"], avaliar_mercado(prob_under_55, odd_justa_u55, odd_casa_u55)
-        ),
+        "Mercado Base": "Under 5.5 Golos",
+        "Probabilidade": f"{prob_under_55*100:.1f}%",
+        "Odd Justa (Modelo)": round(odd_justa_u55, 2),
+        "Odd Casa de Apostas": odd_casa_u55,
+        "Valor (+EV / Edge)": res_u55[0],
+        "Aposta Dinâmica": res_u55[1],
+        "Recomendação": res_u55[2],
     },
     {
-        "Mercado": "Over 7.5 Cantos",
-        "Prob": f"{prob_over_cantos*100:.1f}%",
-        "Odd Justa": round(odd_justa_cantos, 2),
-        "Odd Casa": odd_casa_cantos,
-        *zip(
-            ["Edge", "Stake", "Rec"],
-            avaliar_mercado(prob_over_cantos, odd_justa_cantos, odd_casa_cantos),
-        ),
+        "Mercado Base": "Over 7.5 Cantos",
+        "Probabilidade": f"{prob_over_cantos*100:.1f}%",
+        "Odd Justa (Modelo)": round(odd_justa_cantos, 2),
+        "Odd Casa de Apostas": odd_casa_cantos,
+        "Valor (+EV / Edge)": res_cantos[0],
+        "Aposta Dinâmica": res_cantos[1],
+        "Recomendação": res_cantos[2],
     },
     {
-        "Mercado": "Under 14.5 Cantos",
-        "Prob": f"{prob_under_cantos*100:.1f}%",
-        "Odd Justa": round(odd_justa_u145, 2),
-        "Odd Casa": odd_casa_u145,
-        *zip(
-            ["Edge", "Stake", "Rec"],
-            avaliar_mercado(prob_under_cantos, odd_justa_u145, odd_casa_u145),
-        ),
+        "Mercado Base": "Under 14.5 Cantos",
+        "Probabilidade": f"{prob_under_cantos*100:.1f}%",
+        "Odd Justa (Modelo)": round(odd_justa_u145, 2),
+        "Odd Casa de Apostas": odd_casa_u145,
+        "Valor (+EV / Edge)": res_u145[0],
+        "Aposta Dinâmica": res_u145[1],
+        "Recomendação": res_u145[2],
     },
 ]
 
 # --- Exibição da Tabela Final ---
 st.markdown("### 📊 Tabela Comparativa de Value Bets")
 
-import pandas as pd
-
 df = pd.DataFrame(mercados)
-# Renomear colunas descompactadas do zip
-df.columns = [
-    "Mercado Base",
-    "Probabilidade",
-    "Odd Justa (Modelo)",
-    "Odd Casa de Apostas",
-    "Valor (+EV / Edge)",
-    "Aposta Dinâmica",
-    "Recomendação",
-]
 
-# Formatação visual do Edge em percentagem
-df["Valor (+EV / Edge)"] = df["Valor (+EV / Edge)"].apply(lambda x: f"+{x:.2f}%" if x > 0 else f"{x:.2f}%")
+# Formatação visual do Edge e da Stake
+df["Valor (+EV / Edge)"] = df["Valor (+EV / Edge)"].apply(
+    lambda x: f"+{x:.2f}%" if x > 0 else f"{x:.2f}%"
+)
 df["Aposta Dinâmica"] = df["Aposta Dinâmica"].apply(lambda x: f"{x:.2f} €")
 
 st.dataframe(df, use_container_width=True, hide_index=True)
