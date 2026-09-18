@@ -29,8 +29,20 @@ st.markdown(
     " Edge (+EV)."
 )
 
-# --- Barra Lateral para Inputs do Jogo ---
-st.sidebar.header("⚙️ Parâmetros do Jogo")
+# --- Barra Lateral para Inputs do Jogo e Banca ---
+st.sidebar.header("⚙️ Configuração da Aposta")
+
+# Banca Total
+banca_total = st.sidebar.number_input(
+    "Valor Total da Banca (€)", 10.0, 10000.0, 100.0, 10.0
+)
+
+st.sidebar.markdown("---")
+st.sidebar.header("🏟️ Parâmetros do Jogo")
+
+# Nomes das Equipas
+equipa_casa = st.sidebar.text_input("Equipa da Casa", "FC Porto")
+equipa_fora = st.sidebar.text_input("Equipa Visitante", "Sporting CP")
 
 # Inputs de xG (Golos Esperados)
 xg_casa = st.sidebar.number_input("xG Equipas da Casa", 0.0, 5.0, 1.65, 0.05)
@@ -40,6 +52,9 @@ xg_fora = st.sidebar.number_input("xG Equipas de Fora", 0.0, 5.0, 1.15, 0.05)
 cantos_esperados = st.sidebar.number_input(
     "Média Total de Cantos Esperados", 0.0, 20.0, 9.5, 0.5
 )
+
+# --- Título Dinâmico do Jogo ---
+st.markdown(f"### 🆚 Análise para o Jogo: **{equipa_casa} vs {equipa_fora}**")
 
 # --- Cálculos Estatísticos (Modelo de Poisson) ---
 lambda_golos = xg_casa + xg_fora
@@ -111,11 +126,12 @@ with col6:
   )
 
 
-# Função de cálculo de Value Bet e Stake Dinâmica
-def avaliar_mercado(prob, odd_justa, odd_casa):
+# Função de cálculo de Value Bet e Stake Dinâmica baseada na banca
+def avaliar_mercado(prob, odd_justa, odd_casa, banca):
   edge = (odd_casa / odd_justa) - 1.0
   if edge > 0:
-    stake = round(max(1.0, edge * 30), 2)
+    # Stake proporcional ao edge e à banca total (ex: 1% a 5% da banca ajustado ao EV)
+    stake = round(banca * min(0.05, max(0.005, edge * 0.1)), 2)
     recomendacion = "🔥 VALOR"
   else:
     stake = 0.00
@@ -123,13 +139,19 @@ def avaliar_mercado(prob, odd_justa, odd_casa):
   return edge * 100, stake, recomendacion
 
 
-# Calcular resultados individuais
-res_15 = avaliar_mercado(prob_over_15, odd_justa_15, odd_casa_o15)
-res_25 = avaliar_mercado(prob_over_25, odd_justa_25, odd_casa_o25)
-res_35 = avaliar_mercado(prob_over_35, odd_justa_35, odd_casa_o35)
-res_u55 = avaliar_mercado(prob_under_55, odd_justa_u55, odd_casa_u55)
-res_cantos = avaliar_mercado(prob_over_cantos, odd_justa_cantos, odd_casa_cantos)
-res_u145 = avaliar_mercado(prob_under_cantos, odd_justa_u145, odd_casa_u145)
+# Calcular resultados individuais usando o valor da banca
+res_15 = avaliar_mercado(prob_over_15, odd_justa_15, odd_casa_o15, banca_total)
+res_25 = avaliar_mercado(prob_over_25, odd_justa_25, odd_casa_o25, banca_total)
+res_35 = avaliar_mercado(prob_over_35, odd_justa_35, odd_casa_o35, banca_total)
+res_u55 = avaliar_mercado(
+    prob_under_55, odd_justa_u55, odd_casa_u55, banca_total
+)
+res_cantos = avaliar_mercado(
+    prob_over_cantos, odd_justa_cantos, odd_casa_cantos, banca_total
+)
+res_u145 = avaliar_mercado(
+    prob_under_cantos, odd_justa_u145, odd_casa_u145, banca_total
+)
 
 # Compilação dos dados para a tabela
 mercados = [
