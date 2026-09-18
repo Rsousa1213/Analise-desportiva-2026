@@ -10,32 +10,6 @@ st.set_page_config(
     layout="wide",
 )
 
-# --- CSS Personalizado para Garantir Fundo Escuro ---
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background-color: #0e1117;
-        color: #ffffff;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-Se quiseres o código completo já com o fundo escuro integrado:
-Python
-import numpy as np
-import pandas as pd
-import scipy.stats as stats
-import streamlit as st
-
-# --- Configuração da Página ---
-st.set_page_config(
-    page_title="Modelo de Value Bets & Poisson",
-    page_icon="⚽",
-    layout="wide",
-)
-
 # --- CSS Personalizado para Fundo Escuro ---
 st.markdown(
     """
