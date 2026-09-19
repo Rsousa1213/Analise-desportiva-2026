@@ -1,10 +1,3 @@
-Tens toda a razão! No código simplificado que testámos agora há pouco para afinar o upload, acabei por retirar temporariamente o dicionário completo das 12 ligas e as equipas oficiais que tinhas estruturado.
-
-Vamos juntar o melhor de dois mundos: toda a base de dados completa das competições e equipas que construímos, a ponderação de forma (últimos 5 jogos), o critério de Kelly e o carregamento de prints num único script definitivo.
-
-Aqui tens o código completo e integrado para colocares no teu main.py:
-
-Python
 import io
 import re
 import numpy as np
@@ -404,7 +397,6 @@ def carregar_dados_reais(liga_nome, team_list):
   return df
 
 
-# 3. Barra Lateral (Gestão de Banca e Seleção)
 selected_league = st.sidebar.selectbox(
     "Selecione a Liga / Competição:", list(LEAGUES_CONFIG.keys())
 )
@@ -418,7 +410,6 @@ stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5
 )
 
-# 4. Corpo Principal
 if selected_league:
   teams_list = LEAGUES_CONFIG[selected_league]["teams"]
   df = carregar_dados_reais(selected_league, teams_list)
@@ -433,7 +424,6 @@ if selected_league:
           "Equipa Visitante", away_options, index=0 if away_options else 0
       )
 
-    # --- Ponderação da Forma Recente (Últimos 5 Jogos) ---
     home_games_all = df[df["HomeTeam"] == home_team]
     away_games_all = df[df["AwayTeam"] == away_team]
     home_games = (
@@ -518,7 +508,6 @@ if selected_league:
           100 / prob_under_14_5_corners if prob_under_14_5_corners > 0 else 0
       )
 
-      # Valores por defeito calculados pelo modelo matemático
       defval_o15 = float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0))
       defval_o25 = float(np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0))
       defval_u55 = float(np.clip(round(odd_under_5_5 + 0.1, 2), 1.01, 50.0))
@@ -540,10 +529,7 @@ if selected_league:
       if uploaded_file is not None:
         image = Image.open(uploaded_file)
         st.image(image, caption="Print Carregado", width=400)
-        st.success(
-            "📸 Print carregado com sucesso! Podes ajustar as odds nos seletores"
-            " abaixo se necessário."
-        )
+        st.success("📸 Print carregado com sucesso!")
 
       st.markdown("---")
       st.subheader("🎯 Comparador de Value Bets & Stake Ótima (Kelly)")
