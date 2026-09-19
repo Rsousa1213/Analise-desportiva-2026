@@ -22,12 +22,15 @@ def extrair_odds_inteligente(imagem_pil):
     imagem_pil.save(imagem_bytes, format="PNG")
     resultados = reader.readtext(imagem_bytes.getvalue(), detail=1)
 
+    # Obter dimensões da imagem para mapeamento por coordenadas relativas (percentagem)
+    largura_img, altura_img = imagem_pil.size
+
     items = []
     for bbox, text, prob in resultados:
         x_coords = [p[0] for p in bbox]
         y_coords = [p[1] for p in bbox]
-        x_center = sum(x_coords) / len(x_coords)
-        y_center = sum(y_coords) / len(y_coords)
+        x_center = (sum(x_coords) / len(x_coords)) / largura_img
+        y_center = (sum(y_coords) / len(y_coords)) / altura_img
         items.append({"text": text.strip(), "x": x_center, "y": y_center})
 
     padrao_odd = re.compile(r"^\d{1,2}[\.,]\d{2}$")
@@ -41,13 +44,15 @@ def extrair_odds_inteligente(imagem_pil):
         "u145": None,
     }
 
-    linhas = []
+    all_raw_odds = []
     items_ordenados = sorted(items, key=lambda k: k["y"])
 
+    # Agrupar texto por linhas verticais aproximadas
+    linhas = []
     for item in items_ordenados:
         colocado = False
         for linha in linhas:
-            if abs(linha["y_medio"] - item["y"]) < 22:
+            if abs(linha["y_medio"] - item["y"]) < 0.03:  # tolerância vertical
                 linha["elementos"].append(item)
                 linha["y_medio"] = sum(e["y"] for e in linha["elementos"]) / len(
                     linha["elementos"]
@@ -56,8 +61,6 @@ def extrair_odds_inteligente(imagem_pil):
                 break
         if not colocado:
             linhas.append({"y_medio": item["y"], "elementos": [item]})
-
-    all_raw_odds = []
 
     for linha in linhas:
         elems = sorted(linha["elementos"], key=lambda e: e["x"])
@@ -75,28 +78,30 @@ def extrair_odds_inteligente(imagem_pil):
                 except:
                     pass
 
-        # Mapeamento rigoroso por identificação de linha de golos ou cantos
+        if not odds_na_linha:
+            continue
+
+        # Identificação rigorosa baseada no texto da linha
         if "1.5" in texto_linha or "1,5" in texto_linha:
             if "cantos" not in texto_linha and "escanteios" not in texto_linha:
                 for x_pos, val in odds_na_linha:
-                    if x_pos < 350:
+                    if x_pos < 0.6:  # Lado esquerdo (Over)
                         odds_mapeadas["o15"] = val
         elif "2.5" in texto_linha or "2,5" in texto_linha:
             for x_pos, val in odds_na_linha:
-                if x_pos < 350:
+                if x_pos < 0.6:
                     odds_mapeadas["o25"] = val
         elif "5.5" in texto_linha or "5,5" in texto_linha:
-            if "menos" in texto_linha or any(x[0] >= 350 for x in odds_na_linha):
-                for x_pos, val in odds_na_linha:
-                    if x_pos >= 350:
-                        odds_mapeadas["u55"] = val
+            for x_pos, val in odds_na_linha:
+                if x_pos >= 0.4:  # Lado direito (Under)
+                    odds_mapeadas["u55"] = val
         elif "7.5" in texto_linha or "7,5" in texto_linha:
             for x_pos, val in odds_na_linha:
-                if x_pos < 350:
+                if x_pos < 0.6:
                     odds_mapeadas["c75"] = val
         elif "14.5" in texto_linha or "14,5" in texto_linha:
             for x_pos, val in odds_na_linha:
-                if x_pos >= 350:
+                if x_pos >= 0.4:
                     odds_mapeadas["u145"] = val
 
     return odds_mapeadas, all_raw_odds
