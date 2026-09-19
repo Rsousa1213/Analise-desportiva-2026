@@ -5,7 +5,7 @@ import streamlit as st
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(
-    page_title="Análise Desportiva 26/27",
+    page_title="Análise 27/27",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -50,10 +50,8 @@ def aplicar_estilo_visual():
 
 aplicar_estilo_visual()
 
-st.title("⚽ Análise Desportiva 26/27 (Inserção Manual de Odds)")
-st.markdown(
-    "Análise Avançada com Foco em **Golos, BTTS, Cantos & Critério de Kelly**"
-)
+# Título substituído por HTML com tamanho menor
+st.markdown("### ⚽ Analise 27/27")
 
 # 2. Mapeamento Completo de Ligas e Equipas Oficiais
 LEAGUES_CONFIG = {
@@ -411,7 +409,7 @@ stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5
 )
 
-# Secção na barra lateral para introdução manual de odds atualizada
+# Secção na barra lateral para introdução manual de odds
 st.sidebar.markdown("---")
 st.sidebar.subheader("✏️ Inserção Manual de Odds")
 
