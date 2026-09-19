@@ -1,3 +1,4 @@
+Para resolver o problema definitivamente sem precisares de instalar pacotes externos no teu ambiente Python, podemos utilizar a biblioteca padrão urllib para fazer uma chamada HTTP direta à API do Gemini (gemini-2.5-flash), utilizando a tua chave de API diretamente.Copia e substitui todo o conteúdo do teu ficheiro por este código completo e atualizado:   Pythonimport base64
 from io import BytesIO
 import json
 import numpy as np
@@ -5,15 +6,7 @@ import pandas as pd
 from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
-
-# Importação correta e segura da API do Gemini
-try:
-    from google import genai
-    from google.genai import types
-
-    GENAI_DISPONIVEL = True
-except ImportError:
-    GENAI_DISPONIVEL = False
+import urllib.request
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(
@@ -62,7 +55,7 @@ def aplicar_estilo_visual():
 
 aplicar_estilo_visual()
 
-st.title("⚽ Análise Desportiva 26/27 (Com Leitura Automática por IA)")
+st.title("⚽ Análise Desportiva 26/27 (Leitura Automática por IA)")
 st.markdown(
     "Análise Avançada com Foco em **Golos, BTTS, Cantos & Critério de Kelly**"
 )
@@ -430,6 +423,12 @@ stake_pct_max = st.sidebar.slider(
 # Secção na barra lateral para carregar prints e extrair com IA
 st.sidebar.markdown("---")
 st.sidebar.subheader("📸 Leitura Automática de Prints (IA)")
+
+# Campo para o utilizador inserir a chave API do Gemini diretamente na barra lateral
+gemini_api_key = st.sidebar.text_input(
+    "Chave API do Gemini", type="password", value=""
+)
+
 uploaded_prints = st.sidebar.file_uploader(
     "Carregar Prints das Odds (PNG/JPG)",
     type=["png", "jpg", "jpeg"],
@@ -439,15 +438,13 @@ uploaded_prints = st.sidebar.file_uploader(
 odds_extraidas = {}
 
 if uploaded_prints:
-    if not GENAI_DISPONIVEL:
-        st.sidebar.error(
-            "⚠️ A biblioteca `google-genai` não está instalada no ambiente. Executa `pip install google-genai` no terminal."
+    if not gemini_api_key:
+        st.sidebar.warning(
+            "⚠️ Por favor, insere a tua chave API do Gemini para ativar a leitura automática dos prints."
         )
     else:
         st.sidebar.info("🤖 A analisar os prints com Inteligência Artificial...")
         try:
-            client = genai.Client()
-
             for print_file in uploaded_prints:
                 imagem = Image.open(print_file)
                 st.sidebar.image(
@@ -458,7 +455,9 @@ if uploaded_prints:
 
                 buffered = BytesIO()
                 imagem.save(buffered, format="JPEG")
-                img_bytes = buffered.getvalue()
+                img_base64 = base64.b64encode(buffered.getvalue()).decode(
+                    "utf-8"
+                )
 
                 prompt_extracao = """
                 Analisa esta imagem de uma casa de apostas desportivas. 
@@ -475,32 +474,52 @@ if uploaded_prints:
                 Se alguma odd não estiver visível na imagem, coloca o valor 0.0 para essa chave.
                 """
 
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=[
-                        types.Part.from_bytes(
-                            data=img_bytes, mime_type="image/jpeg"
-                        ),
-                        prompt_extracao,
-                    ],
+                url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
+                payload = {
+                    "contents": [{
+                        "parts": [
+                            {"text": prompt_extracao},
+                            {
+                                "inline_data": {
+                                    "mime_type": "image/jpeg",
+                                    "data": img_base64,
+                                }
+                            },
+                        ]
+                    }]
+                }
+
+                req = urllib.request.Request(
+                    url_api,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
                 )
 
-                texto_resp = response.text.strip()
-                if texto_resp.startswith("```json"):
-                    texto_resp = texto_resp[7:-3].strip()
-                elif texto_resp.startswith("```"):
-                    texto_resp = texto_resp[3:-3].strip()
+                with urllib.request.urlopen(req) as response:
+                    res_data = json.loads(response.read().decode("utf-8"))
+                    texto_resp = (
+                        res_data["candidates"][0]["content"]["parts"][0][
+                            "text"
+                        ]
+                        .strip()
+                    )
 
-                dados_json = json.loads(texto_resp)
-                for k, v in dados_json.items():
-                    if isinstance(v, (int, float)) and v > 1.0:
-                        odds_extraidas[k] = float(v)
+                    if texto_resp.startswith("```json"):
+                        texto_resp = texto_resp[7:-3].strip()
+                    elif texto_resp.startswith("```"):
+                        texto_resp = texto_resp[3:-3].strip()
+
+                    dados_json = json.loads(texto_resp)
+                    for k, v in dados_json.items():
+                        if isinstance(v, (int, float)) and v > 1.0:
+                            odds_extraidas[k] = float(v)
 
             if odds_extraidas:
                 st.sidebar.success("✨ Odds lidas e aplicadas automaticamente!")
         except Exception as e:
             st.sidebar.warning(
-                f"⚠️ Erro ao processar com a IA do Gemini. Confere se a chave API está configurada. Detalhe: {e}"
+                f"⚠️ Erro ao processar com a IA. Confere se a chave API está correta. Detalhe: {e}"
             )
 
 if selected_league:
