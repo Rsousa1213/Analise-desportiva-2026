@@ -5,7 +5,7 @@ import streamlit as st
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(
-    page_title="Análise 27/27",
+    page_title="Analise 26/27",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -50,8 +50,8 @@ def aplicar_estilo_visual():
 
 aplicar_estilo_visual()
 
-# Título substituído por HTML com tamanho menor
-st.markdown("### ⚽ Analise 27/27")
+# Título ajustado para "Analise 26/27" com tamanho reduzido
+st.markdown("### ⚽ Analise 26/27")
 
 # 2. Mapeamento Completo de Ligas e Equipas Oficiais
 LEAGUES_CONFIG = {
@@ -521,7 +521,7 @@ else:
   m7.metric("Prob. Cantos Under 14.5", f"{prob_cantos_under_145*100:.1f}%")
 
   st.markdown("---")
-  st.subheader("💡 Sugestões de Valor & Critério de Kelly")
+  # Título "Sugestões de Valor & Critério de Kelly" removido conforme solicitado
 
   # Tabela Unificada de Mercados (Golos + Cantos)
   mercados_analise = [
