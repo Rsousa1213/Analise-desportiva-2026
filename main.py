@@ -5,35 +5,13 @@ import pandas as pd
 from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
-import easyocr
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(page_title="Análise Desportiva 26/27", layout="wide")
 
 
-@st.cache_resource
-def carregar_leitor_ocr():
-    return easyocr.Reader(['pt', 'en'], gpu=False)
-
-
-def extrair_odds_inteligente(imagem_pil):
-    reader = carregar_leitor_ocr()
-    imagem_bytes = io.BytesIO()
-    imagem_pil.save(imagem_bytes, format="PNG")
-    resultados = reader.readtext(imagem_bytes.getvalue(), detail=1)
-
-    # Recolher todos os textos e ordená-los verticalmente (de cima para baixo)
-    items = []
-    for bbox, text, prob in resultados:
-        y_coords = [p[1] for p in bbox]
-        x_coords = [p[0] for p in bbox]
-        y_center = sum(y_coords) / len(y_coords)
-        x_center = sum(x_coords) / len(x_coords)
-        items.append({"text": text.strip(), "x": x_center, "y": y_center})
-
-    # Ordenar por ordem vertical (cima para baixo)
-    items = sorted(items, key=lambda k: k["y"])
-
+def extrair_odds_por_texto(texto_colado):
+    """Extrai as odds de forma fiável através de um bloco de texto copiado da casa de apostas."""
     odds_mapeadas = {
         "o15": None,
         "o25": None,
@@ -42,74 +20,64 @@ def extrair_odds_inteligente(imagem_pil):
         "c75": None,
         "u145": None,
     }
-
+    
     all_raw_odds = []
-    padrao_odd = re.compile(r"^\d{1,2}[\.,]\d{2}$")
+    padrao_odd = re.compile(r"\b\d{1,2}[\.,]\d{2}\b")
+    
+    # Encontrar todas as ocorrências de números no formato de odd (ex: 1.85, 2,05)
+    matches = padrao_odd.findall(texto_colado)
+    for m in matches:
+        cleaned = m.replace(",", ".")
+        try:
+            val = float(cleaned)
+            if 1.01 <= val <= 50.0:
+                all_raw_odds.append(val)
+        except:
+            pass
 
-    # Extrair todas as odds válidas encontradas na imagem sequencialmente
-    odds_encontradas = []
-    for item in items:
-        cleaned = item["text"].replace(",", ".")
-        if padrao_odd.match(cleaned) or re.match(r"^\d{1,2}\.\d{2}$", cleaned):
+    # Procurar palavras-chave no texto para mapear os mercados de forma inteligente
+    linhas = texto_colado.lower().split("\n")
+    for linha in linhas:
+        # Encontrar valores na mesma linha de texto se houver palavras-chave
+        valores_linha = []
+        for m in padrao_odd.findall(linha):
             try:
-                val = float(cleaned)
-                if 1.01 <= val <= 50.0:
-                    odds_encontradas.append({"val": val, "y": item["y"], "x": item["x"]})
-                    all_raw_odds.append(val)
+                v = float(m.replace(",", "."))
+                if 1.01 <= v <= 50.0:
+                    valores_linha.append(v)
             except:
                 pass
+                
+        if not valores_linha:
+            continue
+            
+        if any(k in linha for k in ["1.5", "mais 1.5", "over 1.5"]):
+            if odds_mapeadas["o15"] is None:
+                odds_mapeadas["o15"] = valores_linha[0]
+        elif any(k in linha for k in ["2.5", "mais 2.5", "over 2.5"]):
+            if odds_mapeadas["o25"] is None:
+                odds_mapeadas["o25"] = valores_linha[0]
+        elif any(k in linha for k in ["5.5", "menos 5.5", "under 5.5"]):
+            if odds_mapeadas["u55"] is None:
+                odds_mapeadas["u55"] = valores_linha[-1]
+        elif any(k in linha for k in ["ambas", "btts", "marcaram", "goal/goal", "gg"]):
+            if odds_mapeadas["btts"] is None:
+                odds_mapeadas["btts"] = valores_linha[0]
+        elif any(k in linha for k in ["7.5", "cantos", "corners"]):
+            if odds_mapeadas["c75"] is None:
+                odds_mapeadas["c75"] = valores_linha[0]
+        elif "14.5" in linha:
+            if odds_mapeadas["u145"] is None:
+                odds_mapeadas["u145"] = valores_linha[-1]
 
-    # Como as capturas de ecrã das casas de apostas seguem uma ordem fixa de linhas 
-    # (ex: Acima/Menos 0.5, 1.5, 2.5, 3.5... ou linhas de cantos), 
-    # vamos mapear por blocos verticais ou por índices se a lista vier estruturada.
-    # Vamos agrupar as odds por proximidade vertical (linhas detetadas)
-    linhas_detectadas = []
-    for odd_obj in odds_encontradas:
-        colocada = False
-        for linha in linhas_detectadas:
-            if abs(linha["y"] - odd_obj["y"]) < 15:  # tolerância de 15 pixéis na vertical
-                linha["odds"].append(odd_obj)
-                colocada = True
-                break
-        if not colocada:
-            linhas_detectadas.append({"y": odd_obj["y"], "odds": [odd_obj]})
-
-    # Ordenar as linhas detetadas de cima para baixo
-    linhas_detectadas = sorted(linhas_detectadas, key=lambda l: l["y"])
-
-    # Recolher textos completos para detetar o contexto de cada linha
-    texto_geral = " ".join([i["text"].lower() for i in items])
-
-    # Atribuição inteligente baseada na sequência visual típica das tabelas de apostas
-    # Cada linha geralmente tem 2 odds (Over à esquerda, Under à direita)
-    lista_odds_ordenadas_por_linha = []
-    for linha in linhas_detectadas:
-        # Ordenar odds da linha da esquerda para a direita (x menor para x maior)
-        odds_linha_ordenadas = sorted(linha["odds"], key=lambda o: o["x"])
-        for o in odds_linha_ordenadas:
-            lista_odds_ordenadas_por_linha.append(o["val"])
-
-    # Se detetarmos texto específico de cantos vs golos no documento:
-    tem_cantos = "cantos" in texto_geral or "acima 7.5" in texto_geral or "7.5" in texto_geral
-
-    # Mapeamento por índice estruturado com base no layout padrão de apostas
-    # Se a lista de odds capturadas tiver elementos suficientes:
-    if len(lista_odds_ordenadas_por_linha) >= 4:
-        # Muitas vezes as tabelas trazem pares (Over, Under) por linha:
-        # Linha 1 (ex: 0.5): [Over, Under]
-        # Linha 2 (ex: 1.5): [Over 1.5, Under 1.5] -> Índices tipicamente 2 e 3 ou semelhantes
-        # Vamos atribuir de forma a garantir que os valores fazem sentido desportivamente
-        
-        # Procurar valores que se encaixem em Over 1.5 e Over 2.5 nas primeiras posições lógicas
-        candidatos_over = [o for o in lista_odds_ordenadas_por_linha if 1.01 <= o <= 10.0]
-        
-        if len(candidatos_over) >= 2:
-            # Regra geral: Over 1.5 costuma ser menor que Over 2.5
-            odds_mapeadas["o15"] = candidatos_over[0]
-            odds_mapeadas["o25"] = candidatos_over[1]
-        
-        if len(candidatos_over) >= 4:
-            odds_mapeadas["u55"] = candidatos_over[-1]  # Under alto costuma ficar no fim
+    # Se faltarem atribuições por texto mas houver odds recolhidas globalmente, preencher sequencialmente
+    if all_raw_odds:
+        if odds_mapeadas["o15"] is None and len(all_raw_odds) >= 1:
+            odds_mapeadas["o15"] = all_raw_odds[0]
+        if odds_mapeadas["o25"] is None and len(all_raw_odds) >= 2:
+            odds_mapeadas["o25"] = all_raw_odds[1]
+        if odds_mapeadas["u55"] is None and len(all_raw_odds) >= 3:
+            odds_mapeadas["u55"] = all_raw_odds[-1]
 
     return odds_mapeadas, all_raw_odds
 
@@ -654,26 +622,16 @@ if selected_league:
             )
 
             st.markdown("---")
-            st.subheader("📸 Captura Rápida de Odds (Upload de Print)")
-            uploaded_file = st.file_uploader(
-                "Carregar Screenshot das Odds (.png, .jpg)",
-                type=["png", "jpg", "jpeg"],
-            )
+            st.subheader("📋 Importação Rápida por Texto (Copiar/Colar do Site de Apostas)")
+            st.markdown("Em vez de imagens, copia o texto com as odds diretamente da página da casa de apostas e cola-o aqui para preenchimento automático sem erros:")
+            
+            texto_copiado = st.text_area("Colar texto das odds aqui:", placeholder="Exemplo: Over 1.5 - 1.33 \n Over 2.5 - 1.95 \n Ambas Marcam - 1.75...")
 
-            if uploaded_file is not None:
-                image = Image.open(uploaded_file)
-                st.image(image, caption="Print Carregado", width=400)
-
-                with st.spinner("🔍 A ler a tabela do print via OCR..."):
-                    odds_mapeadas, odds_detetadas = extrair_odds_inteligente(
-                        image
-                    )
-
+            if texto_copiado:
+                odds_mapeadas, odds_detetadas = extrair_odds_por_texto(texto_copiado)
                 if odds_detetadas:
-                    st.success(
-                        f"📸 Odds detetadas na imagem: {odds_detetadas}"
-                    )
-
+                    st.success(f"✅ Odds detetadas no texto: {odds_detetadas}")
+                    
                     if odds_mapeadas.get("o15") is not None:
                         defval_o15 = odds_mapeadas["o15"]
                     if odds_mapeadas.get("o25") is not None:
@@ -687,9 +645,7 @@ if selected_league:
                     if odds_mapeadas.get("u145") is not None:
                         defval_u145 = odds_mapeadas["u145"]
                 else:
-                    st.warning(
-                        "⚠️ Nenhuma odd válida encontrada na imagem. A usar valores padrão."
-                    )
+                    st.warning("⚠️ Não foram detetadas odds válidas no texto colado.")
 
             st.markdown("---")
             st.subheader(
