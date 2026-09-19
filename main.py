@@ -51,151 +51,148 @@ st.markdown(
     "Análise Avançada com Foco em **Golos, BTTS, Cantos & Critério de Kelly**"
 )
 
-# 2. Mapeamento de Ligas e URLs públicos e gratuitos do Football-Data.co.uk
+# 2. Mapeamento Completo e Atualizado de Ligas e Equipas
 LEAGUES_CONFIG = {
     "PT Liga Portugal": {
         "teams": [
-            "Sporting CP",
-            "SL Benfica",
-            "FC Porto",
-            "SC Braga",
-            "Vitória SC",
-            "Moreirense",
-            "Arouca",
-            "Famalicão",
-            "Casa Pia",
-            "Farense",
-            "Rio Ave",
-            "Gil Vicente",
-            "Estoril",
-            "Boavista",
+            "Académico Casa Pia AC",
+            "CD Nacional",
+            "Estoril Praia",
             "Estrela Amadora",
-            "AVS",
-            "Nacional",
+            "FC Alverca",
+            "FC Arouca",
+            "FC Famalicão",
+            "FC Porto",
+            "Gil Vicente FC",
+            "Marítimo M.",
+            "Moreirense FC",
+            "Rio Ave FC",
             "Santa Clara",
+            "SC Braga",
+            "SL Benfica",
+            "Sporting CP",
+            "Vitória SC",
         ],
-        "csv_url": (
-            "https://www.football-data.co.uk/mmh2627/P1.csv"
-        ),  # Exemplo de link atualizado
+        "csv_url": "https://www.football-data.co.uk/mmh2627/P1.csv",
     },
     "EN Premier League (Inglaterra)": {
         "teams": [
-            "Manchester City",
             "Arsenal",
-            "Liverpool",
             "Aston Villa",
-            "Tottenham",
-            "Chelsea",
-            "Newcastle",
-            "Manchester United",
-            "West Ham",
-            "Crystal Palace",
-            "Brighton",
             "Bournemouth",
-            "Fulham",
-            "Wolves",
-            "Everton",
             "Brentford",
-            "Nottingham Forest",
-            "Leicester City",
+            "Brighton",
+            "Chelsea",
+            "Coventry City",
+            "Crystal Palace",
+            "Everton",
+            "Fulham",
+            "Hull City",
             "Ipswich Town",
-            "Southampton",
+            "Leeds United",
+            "Liverpool",
+            "Manchester City",
+            "Manchester United",
+            "Newcastle",
+            "Nottingham Forest",
+            "Sunderland",
+            "Tottenham",
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/E0.csv",
     },
     "ES La Liga (Espanha)": {
         "teams": [
-            "Real Madrid",
-            "Barcelona",
-            "Atletico Madrid",
             "Athletic Bilbao",
-            "Real Sociedad",
-            "Villarreal",
+            "Atlético de Madrid",
+            "Osasuna",
+            "Elche",
+            "Alavés",
+            "Espanyol",
+            "Barcelona",
+            "Getafe",
+            "Levante",
+            "Málaga",
+            "Racing Santander",
+            "Rayo Vallecano",
+            "Celta de Vigo",
+            "Deportivo La Coruña",
             "Real Betis",
+            "Real Madrid",
+            "Real Sociedad",
             "Sevilla",
             "Valencia",
-            "Girona",
-            "Celta Vigo",
-            "Osasuna",
-            "Getafe",
-            "Mallorca",
-            "Rayo Vallecano",
-            "Alavés",
-            "Las Palmas",
-            "Leganés",
-            "Valladolid",
-            "Espanyol",
+            "Villarreal",
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/SP1.csv",
     },
     "DE Bundesliga (Alemanha)": {
         "teams": [
-            "Bayern München",
-            "Bayer Leverkusen",
+            "Bayern Munich",
             "Borussia Dortmund",
             "RB Leipzig",
-            "Stuttgart",
-            "Eintracht Frankfurt",
-            "Wolfsburg",
-            "Freiburg",
+            "VfB Stuttgart",
             "Hoffenheim",
-            "Werder Bremen",
+            "Bayer Leverkusen",
+            "Freiburg",
+            "Eintracht Frankfurt",
             "Augsburg",
-            "Mainz 05",
+            "Mainz",
             "Union Berlin",
             "Borussia Mönchengladbach",
-            "Heidenheim",
-            "Bochum",
-            "St. Pauli",
-            "Kiel",
+            "Hamburg",
+            "Cologne",
+            "Werder Bremen",
+            "Schalke",
+            "Elversberg",
+            "Paderborn",
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/D1.csv",
     },
     "IT Serie A (Itália)": {
         "teams": [
-            "Inter",
-            "AC Milan",
-            "Juventus",
-            "Napoli",
             "Atalanta",
-            "AS Roma",
-            "Lazio",
-            "Fiorentina",
             "Bologna",
-            "Torino",
-            "Monza",
-            "Genoa",
-            "Lecce",
-            "Udinese",
             "Cagliari",
-            "Empoli",
-            "Verona",
-            "Parma",
             "Como",
+            "Fiorentina",
+            "Frosinone",
+            "Genoa",
+            "Inter de Milão",
+            "Juventus",
+            "Lazio",
+            "Lecce",
+            "Milan",
+            "Monza",
+            "Napoli",
+            "Parma",
+            "Roma",
+            "Sassuolo",
+            "Torino",
+            "Udinese",
             "Venezia",
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/I1.csv",
     },
     "FR Ligue 1 (França)": {
         "teams": [
-            "PSG",
-            "Monaco",
-            "Marseille",
-            "Lille",
-            "Lyon",
-            "Nice",
-            "Lens",
-            "Brest",
-            "Rennes",
-            "Strasbourg",
-            "Toulouse",
-            "Reims",
-            "Montpellier",
-            "Nantes",
-            "Le Havre",
-            "Auxerre",
-            "Angers",
-            "Saint-Étienne",
+            "Angers SCO",
+            "AJ Auxerre",
+            "Stade Brestois 29",
+            "Le Havre AC",
+            "Le Mans FC",
+            "RC Lens",
+            "LOSC Lille",
+            "FC Lorient",
+            "Olympique Lyonnais",
+            "Olympique de Marseille",
+            "AS Monaco",
+            "OGC Nice",
+            "Paris FC",
+            "Paris Saint-Germain",
+            "Stade Rennais",
+            "RC Strasbourg Alsace",
+            "Toulouse FC",
+            "ESTAC Troyes",
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/F1.csv",
     },
@@ -203,26 +200,161 @@ LEAGUES_CONFIG = {
         "teams": [
             "Flamengo",
             "Palmeiras",
-            "Atlético Mineiro",
-            "Fluminense",
-            "São Paulo",
-            "Internacional",
-            "Grêmio",
-            "Botafogo",
-            "Corinthians",
-            "Athletico Paranaense",
+            "Athletico PR",
             "Bahia",
-            "Fortaleza",
+            "Fluminense",
             "Cruzeiro",
-            "Vasco da Gama",
-            "Cuiabá",
-            "Red Bull Bragantino",
-            "Juventude",
-            "Criciúma",
-            "Atlético Goianiense",
+            "Atlético MG",
+            "Coritiba",
+            "Bragantino",
+            "Santos",
+            "Botafogo",
+            "São Paulo",
             "Vitória",
+            "Corinthians",
+            "Mirassol",
+            "Grêmio",
+            "Vasco",
+            "Internacional",
+            "Remo",
+            "Chapecoense",
         ],
-        "csv_url": "",  # Sem CSV público direto garantido, usa fallback inteligente
+        "csv_url": "",
+    },
+    "BR Brasil Série B": {
+        "teams": [
+            "Ponte Preta",
+            "Londrina",
+            "São Bernardo",
+            "Náutico",
+            "Criciúma",
+            "Goiás",
+            "Novorizontino",
+            "CRB",
+            "Avaí",
+            "Atlético-GO",
+            "Cuiabá",
+            "América-MG",
+            "Vila Nova",
+            "Operário-PR",
+            "Athletic",
+            "Botafogo-SP",
+            "Sport",
+            "Juventude",
+            "Ceará",
+            "Fortaleza",
+        ],
+        "csv_url": "",
+    },
+    "AR Liga Argentina": {
+        "teams": [
+            "AA Estudiantes",
+            "Aldosivi",
+            "Argentinos Juniors",
+            "Atlético Tucumán",
+            "Banfield",
+            "Barracas Central",
+            "Belgrano Córdoba",
+            "Boca Juniors",
+            "Central Córdoba",
+            "Defensa y Justicia",
+            "Deportivo Riestra",
+            "Estudiantes",
+            "Gimnasia La Plata",
+            "Gimnasia Mendoza",
+            "Huracán",
+            "Independiente",
+            "Independiente Rivadavia",
+            "Instituto Córdoba",
+            "Lanús",
+            "Newell´s Old Boys",
+            "Platense",
+            "Racing Club",
+            "River Plate",
+            "Rosario Central",
+            "San Lorenzo",
+            "Sarmiento de Junín",
+            "Talleres Córdoba",
+            "Tigre",
+            "Unión de Santa Fe",
+            "Vélez Sarsfield",
+        ],
+        "csv_url": "",
+    },
+    "UEFA Liga dos Campeões": {
+        "teams": [
+            "Bayern de Munique",
+            "Borussia Dortmund",
+            "RB Leipzig",
+            "Stuttgart",
+            "Club Brugge",
+            "Barcelona",
+            "Real Madrid",
+            "Villarreal",
+            "Atlético de Madrid",
+            "Betis",
+            "PSG",
+            "Lens",
+            "Lille",
+            "Arsenal",
+            "Manchester City",
+            "Manchester United",
+            "Aston Villa",
+            "Liverpool",
+            "Inter de Milão",
+            "Napoli",
+            "Roma",
+            "Como",
+            "PSV",
+            "Feyernoord",
+            "Porto",
+            "Sporting",
+            "Slavia Praga",
+            "Galatasaray",
+            "Shakhtar Donetsk",
+        ],
+        "csv_url": "",
+    },
+    "UEFA Liga Europa": {
+        "teams": [
+            "Anderlecht",
+            "Ararat-Armenia",
+            "AZ Alkmaar",
+            "Benfica",
+            "Beşiktaş",
+            "Bournemouth",
+            "Celje",
+            "Celta",
+            "Celtic",
+            "Crystal Palace",
+            "Ferencváros",
+            "GNK Dinamo",
+            "H. Beer-Sheva",
+            "Hoffenheim",
+            "Jagiellonia",
+            "Juventus",
+            "Lech Poznań",
+            "Leverkusen",
+            "Levski Sofia",
+            "Lillestrøm",
+            "Lyon",
+            "Marseille",
+            "Milan",
+            "N.E.C.",
+            "OFI Crete",
+            "Olympiacos",
+            "Omonia",
+            "Real Sociedad",
+            "Rennes",
+            "Salzburg",
+            "Sparta Praha",
+            "Sturm Graz",
+            "Sunderland",
+            "Torreense",
+            "Union SG",
+            "Viktoria Plzeň",
+        ],
+        "csv_url": "",
     },
 }
 
@@ -236,7 +368,6 @@ def carregar_dados_reais(liga_nome, team_list):
   if csv_url:
     try:
       df_raw = pd.read_csv(csv_url)
-      # Mapeamento padrão colunas football-data.co.uk (HomeTeam, AwayTeam, FTHG, FTAG, HC, AC)
       if {"HomeTeam", "AwayTeam", "FTHG", "FTAG"}.issubset(df_raw.columns):
         df = df_raw.dropna(subset=["HomeTeam", "AwayTeam", "FTHG", "FTAG"]).copy()
         if "HC" not in df.columns:
@@ -246,7 +377,7 @@ def carregar_dados_reais(liga_nome, team_list):
     except Exception:
       df = None
 
-  # Fallback: Se o CSV remoto falhar ou não existir, gera dados estruturados baseados nas equipas reais
+  # Fallback inteligente se o link remoto não existir ou falhar
   if df is None or df.empty:
     records = []
     np.random.seed(42)
@@ -303,7 +434,6 @@ if selected_league:
     home_games_all = df[df["HomeTeam"] == home_team]
     away_games_all = df[df["AwayTeam"] == away_team]
 
-    # Filtrar últimos 5 jogos (Forma Recente)
     home_games = (
         home_games_all.tail(5) if len(home_games_all) >= 5 else home_games_all
     )
@@ -323,12 +453,12 @@ if selected_league:
       lambda_home = (
           avg_home_goals_for / league_avg_home if league_avg_home else 1
       ) * (
-          avg_away_goals_against / league_avg_home if league_avg_home else 1
+          avg_home_goals_against / league_avg_home if league_avg_home else 1
       ) * league_avg_home
       lambda_away = (
           avg_away_goals_for / league_avg_away if league_avg_away else 1
       ) * (
-          avg_home_goals_against / league_avg_away if league_avg_away else 1
+          avg_away_goals_against / league_avg_away if league_avg_away else 1
       ) * league_avg_away
 
       max_g = 8
@@ -339,7 +469,6 @@ if selected_league:
               j, lambda_away
           )
 
-      # Probabilidades de Golos (Over, Under e BTTS)
       prob_over_1_5 = (
           1 - (prob_matrix[0, 0] + prob_matrix[1, 0] + prob_matrix[0, 1])
       ) * 100
@@ -356,7 +485,6 @@ if selected_league:
       )
       odd_under_5_5 = 100 / (prob_under_5_5 * 100) if prob_under_5_5 > 0 else 0
 
-      # Cálculo BTTS (Ambas Marcam: Ambas equipas com >= 1 golo)
       prob_btts_sim = (
           sum(
               prob_matrix[i, j]
@@ -367,7 +495,6 @@ if selected_league:
       )
       odd_btts = 100 / prob_btts_sim if prob_btts_sim > 0 else 0
 
-      # Cantos (Over e Under) com base nos últimos jogos
       home_corners = home_games["HC"].mean() + home_games["AC"].mean()
       away_corners = away_games["HC"].mean() + away_games["AC"].mean()
       avg_total_corners = (home_corners + away_corners) / 2
@@ -387,7 +514,6 @@ if selected_league:
           100 / prob_under_14_5_corners if prob_under_14_5_corners > 0 else 0
       )
 
-      # --- APRESENTAÇÃO DE DADOS ---
       st.markdown("---")
       st.subheader(
           f"📊 Análise Estatística (Baseada na Forma dos Últimos 5 Jogos):"
@@ -456,7 +582,6 @@ if selected_league:
             f" **{stake_pct_max}%**"
         )
 
-      # --- TABELA COMPARATIVA DE VALUE BETS & CRITÉRIO DE KELLY ---
       st.markdown("---")
       st.subheader("🎯 Comparador de Value Bets & Stake Ótima (Kelly)")
       st.markdown(
@@ -508,7 +633,6 @@ if selected_league:
             "Odd (Cantos 14.5)", 1.01, 50.0, defval_u145, 0.01
         )
 
-      # Cálculo de Edge / Valor (%)
       edge_o15 = ((prob_over_1_5 / 100) * bookie_odd_o15 - 1) * 100
       edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
       edge_u55 = ((prob_under_5_5) * bookie_odd_u55 - 1) * 100
@@ -517,16 +641,13 @@ if selected_league:
       edge_u145 = ((prob_under_14_5_corners / 100) * bookie_odd_u145 - 1) * 100
 
 
-      # Critério de Kelly Fracionado / Ajustado ao Edge
       def calcular_stake_kelly(prob_pct, odd, banca, max_pct):
         p = prob_pct / 100.0
-        q = 1.0 - p
         if (odd - 1) <= 0:
           return 0.0
         kelly_fraction = (p * odd - 1) / (odd - 1)
         if kelly_fraction <= 0:
           return 0.0
-        # Limita a stake ao teto definido pelo utilizador (ex: fracionado seguro)
         stake_aplicada = banca * min(max_pct / 100.0, kelly_fraction * 0.5)
         return round(stake_aplicada, 2)
 
@@ -556,7 +677,6 @@ if selected_league:
           stake_pct_max,
       )
 
-      # Tabela Final
       tabela_dados = [
           {
               "Mercado Base": "Over 1.5 Golos",
