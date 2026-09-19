@@ -606,7 +606,6 @@ if selected_league:
 
       # Se o utilizador colou texto, tentamos extrair números decimais válidos de odds (ex: 1.45, 2.10)
       if texto_colado:
-        # Procura por números no formato X.XX
         numeros_encontrados = re.findall(
             r"\b\d[.,]\d{2}\b", texto_colado.replace(",", ".")
         )
@@ -737,9 +736,7 @@ if selected_league:
               "Odd Casa de Apostas": f"{bookie_odd_btts:.2f}",
               "Valor (+EV / Edge)": f"{edge_btts:+.2f}%",
               "Aposta Dinâmica (Kelly)": f"{val_btts:.2f} €",
-              "Recomendação": "🔥 VALOR" > 0 and edge_btts > 0
-              if "🔥 VALOR"
-              else "❌ Sem Valor",
+              "Recomendação": "🔥 VALOR" if edge_btts > 0 else "❌ Sem Valor",
           },
           {
               "Mercado Base": "Over 7.5 Cantos",
