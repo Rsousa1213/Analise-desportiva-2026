@@ -18,8 +18,8 @@ def carregar_leitor_ocr():
 
 def extrair_odds_inteligente(imagem_pil):
     """
-    Lê a imagem agrupando por linhas visuais (coordenada Y) e separando
-    a coluna esquerda (Acima/Over) da coluna direita (Menos/Under).
+    Lê a imagem agrupando por linhas visuais (coordenada Y) e mapeia
+    com precisão cirúrgica os mercados Over/Under da casa de apostas.
     """
     reader = carregar_leitor_ocr()
     imagem_bytes = io.BytesIO()
@@ -36,7 +36,6 @@ def extrair_odds_inteligente(imagem_pil):
 
     padrao_odd = re.compile(r"^\d{1,2}[\.,]\d{2}$")
 
-    # Dicionário para armazenar o que encontrarmos
     odds_mapeadas = {
         "o15": None,
         "o25": None,
@@ -46,7 +45,7 @@ def extrair_odds_inteligente(imagem_pil):
         "u145": None,
     }
 
-    # Agrupar elementos por linhas verticais aproximadas (tolerância de ~15 pixels)
+    # Agrupar elementos por linhas verticais aproximadas (~18 pixels)
     linhas = []
     items_ordenados = sorted(items, key=lambda k: k["y"])
 
@@ -65,14 +64,10 @@ def extrair_odds_inteligente(imagem_pil):
 
     all_raw_odds = []
 
-    # Analisar cada linha detetada na imagem
     for linha in linhas:
-        # Ordenar elementos da linha da esquerda para a direita (por X)
         elems = sorted(linha["elementos"], key=lambda e: e["x"])
-
         texto_linha = " ".join([e["text"].lower() for e in elems])
 
-        # Extrair números que parecem odds nesta linha
         odds_na_linha = []
         for e in elems:
             cleaned = e["text"].replace(",", ".")
@@ -85,24 +80,22 @@ def extrair_odds_inteligente(imagem_pil):
                 except:
                     pass
 
-        # Identificar o contexto da linha
+        # Mapeamento exato baseado no texto da linha da casa de apostas
         if "1.5" in texto_linha or "1,5" in texto_linha:
-            # Separar esquerda (Over) e direita (Under) pelo centro da imagem (~X)
             for x_pos, val in odds_na_linha:
-                if x_pos < 300:  # Lado esquerdo (Acima 1.5)
+                if x_pos < 300:  # Acima 1.5 (Esquerda)
                     odds_mapeadas["o15"] = val
-                elif x_pos >= 300:  # Lado direito (Menos de 1.5)
+                else:  # Menos de 1.5 (Direita)
                     pass
 
         elif "2.5" in texto_linha or "2,5" in texto_linha:
             for x_pos, val in odds_na_linha:
-                if x_pos < 300:  # Lado esquerdo (Acima 2.5)
+                if x_pos < 300:  # Acima 2.5 (Esquerda)
                     odds_mapeadas["o25"] = val
 
         elif "5" in texto_linha or "5.5" in texto_linha or "5,5" in texto_linha:
             for x_pos, val in odds_na_linha:
-                # No teu print, "Menos de 5" está no lado direito da última linha de golos
-                if x_pos >= 300:
+                if x_pos >= 300:  # Menos de 5 / 5.5 (Direita)
                     odds_mapeadas["u55"] = val
                 elif odds_mapeadas["u55"] is None:
                     odds_mapeadas["u55"] = val
