@@ -1,10 +1,15 @@
 import numpy as np
 import pandas as pd
+from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
 
 # 1. Configuração da Página e Estilo Visual
-st.set_page_config(page_title="Análise Desportiva 26/27", layout="wide")
+st.set_page_config(
+    page_title="Análise Desportiva 26/27",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 
 def aplicar_estilo_visual():
@@ -20,7 +25,7 @@ def aplicar_estilo_visual():
             background-attachment: fixed !important;
         }}
         [data-testid="stHeader"], [data-testid="stSidebar"] {{
-            background-color: rgba(15, 15, 15, 0.8) !important;
+            background-color: rgba(15, 15, 15, 0.85) !important;
         }}
         .stMainBlockContainer {{
             background-color: rgba(22, 22, 22, 0.92) !important;
@@ -411,9 +416,9 @@ stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5
 )
 
-# Secção na barra lateral para carregar MÚLTIPLOS prints para consulta visual
+# Secção na barra lateral para carregar e inspecionar os prints
 st.sidebar.markdown("---")
-st.sidebar.subheader("📸 Visualizar Prints da Casa de Apostas")
+st.sidebar.subheader("📸 Prints das Casas de Apostas")
 uploaded_prints = st.sidebar.file_uploader(
     "Carregar Prints (PNG/JPG)",
     type=["png", "jpg", "jpeg"],
@@ -421,11 +426,18 @@ uploaded_prints = st.sidebar.file_uploader(
 )
 
 if uploaded_prints:
+    st.sidebar.success(f"✅ {len(uploaded_prints)} print(s) carregado(s).")
     for idx, print_file in enumerate(uploaded_prints):
+        # Mostra o print redimensionado para consulta visual imediata
+        imagem = Image.open(print_file)
         st.sidebar.image(
-            print_file,
+            imagem,
             caption=f"Print {idx+1}: {print_file.name}",
             use_container_width=True,
+        )
+        st.sidebar.markdown(
+            "<small><i>Dica: Lê as odds da imagem e insere-as nos campos à direita para calcular o valor real (+EV).</i></small>",
+            unsafe_allow_html=True,
         )
 
 if selected_league:
@@ -565,10 +577,10 @@ if selected_league:
 
             st.markdown("---")
             st.subheader(
-                "🎯 Inserção de Odds da Casa de Apostas (Consulta por Múltiplos Prints)"
+                "🎯 Inserção de Odds da Casa de Apostas (Baseado nos Prints)"
             )
             st.markdown(
-                "Pode carregar vários prints em simultâneo na barra lateral. Os campos abaixo vêm pré-preenchidos com as odds justas calculadas pelo modelo:"
+                "Consulta os teus prints na barra lateral esquerda e ajusta os campos abaixo com as odds reais da tua casa de apostas:"
             )
 
             bc1, bc2, bc3, bc4, bc5, bc6 = st.columns(6)
