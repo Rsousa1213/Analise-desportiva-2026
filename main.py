@@ -22,9 +22,7 @@ def extrair_odds_inteligente(imagem_pil):
     imagem_pil.save(imagem_bytes, format="PNG")
     resultados = reader.readtext(imagem_bytes.getvalue(), detail=1)
 
-    # Obter dimensões da imagem para mapeamento por coordenadas relativas (percentagem)
     largura_img, altura_img = imagem_pil.size
-
     items = []
     for bbox, text, prob in resultados:
         x_coords = [p[0] for p in bbox]
@@ -47,12 +45,11 @@ def extrair_odds_inteligente(imagem_pil):
     all_raw_odds = []
     items_ordenados = sorted(items, key=lambda k: k["y"])
 
-    # Agrupar texto por linhas verticais aproximadas
     linhas = []
     for item in items_ordenados:
         colocado = False
         for linha in linhas:
-            if abs(linha["y_medio"] - item["y"]) < 0.03:  # tolerância vertical
+            if abs(linha["y_medio"] - item["y"]) < 0.03:
                 linha["elementos"].append(item)
                 linha["y_medio"] = sum(e["y"] for e in linha["elementos"]) / len(
                     linha["elementos"]
@@ -62,47 +59,65 @@ def extrair_odds_inteligente(imagem_pil):
         if not colocado:
             linhas.append({"y_medio": item["y"], "elementos": [item]})
 
+    # Recolher todas as odds válidas ordenadas de cima para baixo
+    odds_com_posicao = []
     for linha in linhas:
         elems = sorted(linha["elementos"], key=lambda e: e["x"])
         texto_linha = " ".join([e["text"].lower() for e in elems])
 
-        odds_na_linha = []
         for e in elems:
             cleaned = e["text"].replace(",", ".")
             if padrao_odd.match(cleaned) or re.match(r"^\d{1,2}\.\d{2}$", cleaned):
                 try:
                     val = float(cleaned)
                     if 1.01 <= val <= 50.0:
-                        odds_na_linha.append((e["x"], val))
+                        odds_com_posicao.append({
+                            "val": val,
+                            "x": e["x"],
+                            "y": linha["y_medio"],
+                            "texto": texto_linha,
+                        })
                         all_raw_odds.append(val)
                 except:
                     pass
 
-        if not odds_na_linha:
-            continue
+    # Estratégia dedicada:
+    # 1. Procurar especificamente pelas linhas de Golos no topo da imagem (y menor)
+    odds_golos = [o for o in odds_com_posicao if o["y"] < 0.55]
+    odds_cantos = [o for o in odds_com_posicao if o["y"] >= 0.55]
 
-        # Identificação rigorosa baseada no texto da linha
-        if "1.5" in texto_linha or "1,5" in texto_linha:
-            if "cantos" not in texto_linha and "escanteios" not in texto_linha:
-                for x_pos, val in odds_na_linha:
-                    if x_pos < 0.6:  # Lado esquerdo (Over)
-                        odds_mapeadas["o15"] = val
-        elif "2.5" in texto_linha or "2,5" in texto_linha:
-            for x_pos, val in odds_na_linha:
-                if x_pos < 0.6:
-                    odds_mapeadas["o25"] = val
-        elif "5.5" in texto_linha or "5,5" in texto_linha:
-            for x_pos, val in odds_na_linha:
-                if x_pos >= 0.4:  # Lado direito (Under)
-                    odds_mapeadas["u55"] = val
-        elif "7.5" in texto_linha or "7,5" in texto_linha:
-            for x_pos, val in odds_na_linha:
-                if x_pos < 0.6:
-                    odds_mapeadas["c75"] = val
-        elif "14.5" in texto_linha or "14,5" in texto_linha:
-            for x_pos, val in odds_na_linha:
-                if x_pos >= 0.4:
-                    odds_mapeadas["u145"] = val
+    # Ordenar golos por eixo vertical (cima para baixo) e horizontal (esquerda para direita)
+    odds_golos = sorted(odds_golos, key=lambda k: (k["y"], k["x"]))
+
+    # Mapeamento sequencial inteligente para o painel de golos
+    # Normalmente: 1ª linha útil de golos (Over 1.5) e 2ª linha útil (Over 2.5)
+    candidatos_over = [o["val"] for o in odds_golos if o["x"] < 0.6]
+    candidatos_under = [o["val"] for o in odds_golos if o["x"] >= 0.4]
+
+    if len(candidatos_over) >= 1:
+        odds_mapeadas["o15"] = candidatos_over[0]
+    if len(candidatos_over) >= 2:
+        odds_mapeadas["o25"] = candidatos_over[1]
+
+    if len(candidatos_under) >= 3:
+        odds_mapeadas["u55"] = candidatos_under[
+            -1
+        ]  # Normalmente o under mais baixo/fundo nos golos
+
+    # Mapeamento para cantos (já funcionava bem, mantemos a validação por texto ou posição inferior)
+    for o in odds_cantos:
+        if "7.5" in o["texto"] or "7,5" in o["texto"]:
+            if o["x"] < 0.6:
+                odds_mapeadas["c75"] = o["val"]
+        elif "14.5" in o["texto"] or "14,5" in o["texto"]:
+            if o["x"] >= 0.4:
+                odds_mapeadas["u145"] = o["val"]
+
+    # Fallback por índice global caso o texto específico falhe mas a ordem se mantenha
+    if odds_mapeadas["o15"] is None and len(candidatos_over) > 0:
+        odds_mapeadas["o15"] = candidatos_over[0]
+    if odds_mapeadas["o25"] is None and len(candidatos_over) > 1:
+        odds_mapeadas["o25"] = candidatos_over[1]
 
     return odds_mapeadas, all_raw_odds
 
