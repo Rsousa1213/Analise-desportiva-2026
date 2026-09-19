@@ -1,11 +1,12 @@
+import base64
 from io import BytesIO
 import json
+import urllib.request
 import numpy as np
 import pandas as pd
 from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
-import urllib.request
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(
@@ -423,7 +424,6 @@ stake_pct_max = st.sidebar.slider(
 st.sidebar.markdown("---")
 st.sidebar.subheader("📸 Leitura Automática de Prints (IA)")
 
-# Campo para o utilizador inserir a chave API do Gemini diretamente na barra lateral
 gemini_api_key = st.sidebar.text_input(
     "Chave API do Gemini", type="password", value=""
 )
@@ -452,6 +452,14 @@ if uploaded_prints:
                     use_container_width=True,
                 )
 
+                # Tratamento de Transparência RGBA para JPEG
+                if imagem.mode in ("RGBA", "LA"):
+                    fundo = Image.new("RGB", imagem.size, (255, 255, 255))
+                    fundo.paste(imagem, mask=imagem.split()[3])
+                    imagem = fundo
+                elif imagem.mode != "RGB":
+                    imagem = imagem.convert("RGB")
+
                 buffered = BytesIO()
                 imagem.save(buffered, format="JPEG")
                 img_base64 = base64.b64encode(buffered.getvalue()).decode(
@@ -461,19 +469,15 @@ if uploaded_prints:
                 prompt_extracao = """
                 Analisa esta imagem de uma casa de apostas desportivas. 
                 Identifica e extrai os valores numéricos das odds para os seguintes mercados (se presentes):
-                - Over 1.5 (Mais de 1.5 golos)
-                - Over 2.5 (Mais de 2.5 golos)
-                - Under 5.5 (Menos de 5.5 golos)
-                - BTTS / Ambas Marcam (Sim)
-                - Over 7.5 Cantos
-                - Under 14.5 Cantos
-
-                Retorna APENAS um objeto JSON válido (sem markdown extra, sem texto adicional) com chaves em minúsculas:
-                {"over_15": 0.0, "over_25": 0.0, "under_55": 0.0, "btts": 0.0, "cantos_75": 0.0, "cantos_145": 0.0}
-                Se alguma odd não estiver visível na imagem, coloca o valor 0.0 para essa chave.
+                - Over 1.5
+                - Over 2.5
+                - Under 2.5
+                - BTTS (Ambas Marcam Sim)
+                - Cantos Over 8.5 / 9.5
+                Devolve o resultado estritamente em formato JSON com chaves em minúsculas e valores numéricos em float (ex: {"over_15": 1.30, "over_25": 1.85, "btts_sim": 1.75}). Se algum mercado não estiver visível, omite-o.
                 """
 
-                url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
+                url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
                 payload = {
                     "contents": [{
                         "parts": [
@@ -496,335 +500,125 @@ if uploaded_prints:
                 )
 
                 with urllib.request.urlopen(req) as response:
-                    res_data = json.loads(response.read().decode("utf-8"))
-                    texto_resp = (
-                        res_data["candidates"][0]["content"]["parts"][0][
-                            "text"
-                        ]
-                        .strip()
+                    resposta_json = json.loads(
+                        response.read().decode("utf-8")
+                    )
+                    texto_resposta = (
+                        resposta_json.get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "{}")
                     )
 
-                    if texto_resp.startswith("```json"):
-                        texto_resp = texto_resp[7:-3].strip()
-                    elif texto_resp.startswith("```"):
-                        texto_resp = texto_resp[3:-3].strip()
+                    # Limpar formatação Markdown caso venha envolvido em blocos ```json ... ```
+                    texto_limpo = (
+                        texto_resposta.replace("```json", "")
+                        .replace("```", "")
+                        .strip()
+                    )
+                    dados_lidos = json.loads(texto_limpo)
+                    odds_extraidas.update(dados_lidos)
 
-                    dados_json = json.loads(texto_resp)
-                    for k, v in dados_json.items():
-                        if isinstance(v, (int, float)) and v > 1.0:
-                            odds_extraidas[k] = float(v)
+            st.sidebar.success("✅ Odds extraídas com sucesso via IA!")
+            st.sidebar.json(odds_extraidas)
 
-            if odds_extraidas:
-                st.sidebar.success("✨ Odds lidas e aplicadas automaticamente!")
         except Exception as e:
-            st.sidebar.warning(
-                f"⚠️ Erro ao processar com a IA. Confere se a chave API está correta. Detalhe: {e}"
-            )
+            st.sidebar.error(f"❌ Erro ao processar com a IA: {e}")
 
-if selected_league:
-    teams_list = LEAGUES_CONFIG[selected_league]["teams"]
-    df = carregar_dados_reais(selected_league, teams_list)
+# 3. Corpo Principal - Análise de Jogos
+teams_available = LEAGUES_CONFIG[selected_league]["teams"]
+df_liga = carregar_dados_reais(selected_league, teams_available)
 
-    if df is not None and not df.empty:
-        col_h, col_a = st.columns(2)
-        with col_h:
-            home_team = st.selectbox("Equipa da Casa", teams_list, index=0)
-        with col_a:
-            away_options = [t for t in teams_list if t != home_team]
-            away_team = st.selectbox(
-                "Equipa Visitante", away_options, index=0 if away_options else 0
-            )
+col1, col2 = st.columns(2)
+with col1:
+    home_team = st.selectbox(
+        "Equipa da Casa",
+        teams_available,
+        index=0 if len(teams_available) > 0 else 0,
+    )
+with col2:
+    away_team = st.selectbox(
+        "Equipa Visitante",
+        teams_available,
+        index=1 if len(teams_available) > 1 else 0,
+    )
 
-        home_games_all = df[df["HomeTeam"] == home_team]
-        away_games_all = df[df["AwayTeam"] == away_team]
-        home_games = (
-            home_games_all.tail(5)
-            if len(home_games_all) >= 5
-            else home_games_all
-        )
-        away_games = (
-            away_games_all.tail(5)
-            if len(away_games_all) >= 5
-            else away_games_all
-        )
+if home_team == away_team:
+    st.warning("⚠️ Seleciona duas equipas diferentes para realizar a análise.")
+else:
+    # Cálculo de Médias Históricas
+    media_h_gs = df_liga[df_liga["HomeTeam"] == home_team]["FTHG"].mean()
+    media_h_gc = df_liga[df_liga["HomeTeam"] == home_team]["FTAG"].mean()
+    media_a_gs = df_liga[df_liga["AwayTeam"] == away_team]["FTAG"].mean()
+    media_a_gc = df_liga[df_liga["AwayTeam"] == away_team]["FTHG"].mean()
 
-        if not home_games.empty and not away_games.empty:
-            avg_home_goals_for = home_games["FTHG"].mean()
-            avg_home_goals_against = home_games["FTAG"].mean()
-            avg_away_goals_for = away_games["FTAG"].mean()
-            avg_away_goals_against = home_games["FTHG"].mean()
+    media_gols_geral_h = df_liga["FTHG"].mean()
+    media_gols_geral_a = df_liga["FTAG"].mean()
 
-            league_avg_home = df["FTHG"].mean()
-            league_avg_away = df["FTAG"].mean()
+    lambda_home = max(
+        0.5, (media_h_gs / media_gols_geral_h) * (media_a_gc / media_gols_geral_a) * media_gols_geral_h
+    )
+    lambda_away = max(
+        0.5, (media_a_gs / media_gols_geral_a) * (media_h_gc / media_gols_geral_h) * media_gols_geral_a
+    )
 
-            lambda_home = (
-                (avg_home_goals_for / league_avg_home if league_avg_home else 1)
-                * (
-                    avg_home_goals_against / league_avg_home
-                    if league_avg_home
-                    else 1
-                )
-                * league_avg_home
-            )
-            lambda_away = (
-                (avg_away_goals_for / league_avg_away if league_avg_away else 1)
-                * (
-                    avg_away_goals_against / league_avg_away
-                    if league_avg_away
-                    else 1
-                )
-                * league_avg_away
-            )
+    # Simulação Poisson de Placares
+    max_goals = 6
+    matriz_prob = np.outer(
+        poisson.pmf(np.arange(max_goals + 1), lambda_home),
+        poisson.pmf(np.arange(max_goals + 1), lambda_away),
+    )
 
-            max_g = 8
-            prob_matrix = np.zeros((max_g, max_g))
-            for i in range(max_g):
-                for j in range(max_g):
-                    prob_matrix[i, j] = poisson.pmf(
-                        i, lambda_home
-                    ) * poisson.pmf(j, lambda_away)
+    prob_home_win = np.sum(np.tril(matriz_prob, -1))
+    prob_draw = np.sum(np.diag(matriz_prob))
+    prob_away_win = np.sum(np.triu(matriz_prob, 1))
 
-            prob_over_1_5 = (
-                1 - (prob_matrix[0, 0] + prob_matrix[1, 0] + prob_matrix[0, 1])
-            ) * 100
-            odd_over_1_5 = 100 / prob_over_1_5 if prob_over_1_5 > 0 else 0
+    prob_over_15 = 1 - np.sum(matriz_prob[0, 0]) - np.sum(matriz_prob[0, 1]) - np.sum(matriz_prob[1, 0])
+    prob_over_25 = 1 - np.sum(matriz_prob[0:2, 0:2])
+    prob_btts = 1 - (np.sum(matriz_prob[0, :]) + np.sum(matriz_prob[:, 0]) - matriz_prob[0, 0])
 
-            prob_under_2_5 = sum(
-                prob_matrix[i, j]
-                for i in range(max_g)
-                for j in range(max_g)
-                if (i + j) <= 2
-            )
-            prob_over_2_5 = (1 - prob_under_2_5) * 100
-            odd_over_2_5 = 100 / prob_over_2_5 if prob_over_2_5 > 0 else 0
+    st.markdown("---")
+    st.subheader("📊 Previsões Estatísticas (Modelo de Poisson)")
 
-            prob_under_5_5 = sum(
-                prob_matrix[i, j]
-                for i in range(max_g)
-                for j in range(max_g)
-                if (i + j) <= 5
-            )
-            odd_under_5_5 = (
-                100 / (prob_under_5_5 * 100) if prob_under_5_5 > 0 else 0
-            )
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Esperança Golos (Casa)", f"{lambda_home:.2f}")
+    m2.metric("Esperança Golos (Fora)", f"{lambda_away:.2f}")
+    m3.metric("Prob. Over 2.5", f"{prob_over_25*100:.1f}%")
+    m4.metric("Prob. Ambas Marcam (BTTS)", f"{prob_btts*100:.1f}%")
 
-            prob_btts_sim = (
-                sum(
-                    prob_matrix[i, j]
-                    for i in range(1, max_g)
-                    for j in range(1, max_g)
-                )
-                * 100
-            )
-            odd_btts = 100 / prob_btts_sim if prob_btts_sim > 0 else 0
+    st.markdown("---")
+    st.subheader("💡 Sugestões de Valor & Critério de Kelly")
 
-            home_corners = home_games["HC"].mean() + home_games["AC"].mean()
-            away_corners = away_games["HC"].mean() + away_games["AC"].mean()
-            avg_total_corners = (home_corners + away_corners) / 2
-            lambda_corners = avg_total_corners
+    # Tabela de Mercados Analisados
+    mercados_analise = [
+        {"Mercado": "Over 1.5 Golos", "Prob_Calc": prob_over_15, "Odd_Extraida": odds_extraidas.get("over_15", 1.35)},
+        {"Mercado": "Over 2.5 Golos", "Prob_Calc": prob_over_25, "Odd_Extraida": odds_extraidas.get("over_25", 1.95)},
+        {"Mercado": "Ambas Marcam (BTTS)", "Prob_Calc": prob_btts, "Odd_Extraida": odds_extraidas.get("btts_sim", 1.80)},
+    ]
 
-            prob_over_7_5_corners = (
-                1 - sum(poisson.pmf(k, lambda_corners) for k in range(8))
-            ) * 100
-            odd_over_7_5_corners = (
-                100 / prob_over_7_5_corners if prob_over_7_5_corners > 0 else 0
-            )
+    dados_tabela = []
+    for item in mercados_analise:
+        prob = item["Prob_Calc"]
+        odd = item["Odd_Extraida"]
+        fair_odd = 1 / prob if prob > 0 else 99.0
+        edge = (prob * odd) - 1  # Vantagem matemática
 
-            prob_under_14_5_corners = (
-                sum(poisson.pmf(k, lambda_corners) for k in range(15)) * 100
-            )
-            odd_under_14_5_corners = (
-                100 / prob_under_14_5_corners
-                if prob_under_14_5_corners > 0
-                else 0
-            )
+        # Critério de Kelly Fracionado (¼ de Kelly para gestão segura)
+        kelly_fraction = (prob * odd - 1) / (odd - 1) if odd > 1 else 0
+        stake_recomendada = max(0.0, banca_inicial * (kelly_fraction / 4))
+        stake_recomendada = min(stake_recomendada, banca_inicial * (stake_pct_max / 100))
 
-            defval_o15 = odds_extraidas.get(
-                "over_15",
-                float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0)),
-            )
-            defval_o25 = odds_extraidas.get(
-                "over_25",
-                float(np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0)),
-            )
-            defval_u55 = odds_extraidas.get(
-                "under_55",
-                float(np.clip(round(odd_under_5_5 + 0.1, 2), 1.01, 50.0)),
-            )
-            defval_btts = odds_extraidas.get(
-                "btts", float(np.clip(round(odd_btts + 0.1, 2), 1.01, 50.0))
-            )
-            defval_c75 = odds_extraidas.get(
-                "cantos_75",
-                float(
-                    np.clip(round(odd_over_7_5_corners + 0.1, 2), 1.01, 50.0)
-                ),
-            )
-            defval_u145 = odds_extraidas.get(
-                "cantos_145",
-                float(
-                    np.clip(round(odd_under_14_5_corners + 0.1, 2), 1.01, 50.0)
-                ),
-            )
+        status = "🔥 Valor Encontrado" if edge > 0.05 else "⚖️ Neutro / Evitar"
 
-            st.markdown("---")
-            st.subheader(
-                "🎯 Odds Preenchidas Automaticamente (via Leitura de Prints por IA)"
-            )
-            st.markdown(
-                "Podes verificar ou alterar manualmente os valores abaixo conforme necessário:"
-            )
+        dados_tabela.append({
+            "Mercado": item["Mercado"],
+            "Probabilidade IA/Poisson": f"{prob*100:.1f}%",
+            "Odd Disponível": f"{odd:.2f}",
+            "Odd Justa": f"{fair_odd:.2f}",
+            "Edge (%)": f"{edge*100:+.1f}%",
+            "Stake Recomendada (€)": f"€{stake_recomendada:.2f}",
+            "Avaliação": status,
+        })
 
-            bc1, bc2, bc3, bc4, bc5, bc6 = st.columns(6)
-            with bc1:
-                bookie_odd_o15 = st.number_input(
-                    "Odd (Over 1.5)", 1.01, 50.0, defval_o15, 0.01
-                )
-            with bc2:
-                bookie_odd_o25 = st.number_input(
-                    "Odd (Over 2.5)", 1.01, 50.0, defval_o25, 0.01
-                )
-            with bc3:
-                bookie_odd_u55 = st.number_input(
-                    "Odd (Under 5.5)", 1.01, 50.0, defval_u55, 0.01
-                )
-            with bc4:
-                bookie_odd_btts = st.number_input(
-                    "Odd (BTTS)", 1.01, 50.0, defval_btts, 0.01
-                )
-            with bc5:
-                bookie_odd_c75 = st.number_input(
-                    "Odd (Cantos 7.5)", 1.01, 50.0, defval_c75, 0.01
-                )
-            with bc6:
-                bookie_odd_u145 = st.number_input(
-                    "Odd (Cantos 14.5)", 1.01, 50.0, defval_u145, 0.01
-                )
-
-            edge_o15 = ((prob_over_1_5 / 100) * bookie_odd_o15 - 1) * 100
-            edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
-            edge_u55 = ((prob_under_5_5) * bookie_odd_u55 - 1) * 100
-            edge_btts = ((prob_btts_sim / 100) * bookie_odd_btts - 1) * 100
-            edge_c75 = (
-                (prob_over_7_5_corners / 100) * bookie_odd_c75 - 1
-            ) * 100
-            edge_u145 = (
-                (prob_under_14_5_corners / 100) * bookie_odd_u145 - 1
-            ) * 100
-
-            def calcular_stake_kelly(prob_pct, odd, banca, max_pct):
-                p = prob_pct / 100.0
-                if (odd - 1) <= 0:
-                    return 0.0
-                kelly_fraction = (p * odd - 1) / (odd - 1)
-                if kelly_fraction <= 0:
-                    return 0.0
-                stake_aplicada = banca * min(
-                    max_pct / 100.0, kelly_fraction * 0.5
-                )
-                return round(stake_aplicada, 2)
-
-            val_o15 = calcular_stake_kelly(
-                prob_over_1_5, bookie_odd_o15, banca_inicial, stake_pct_max
-            )
-            val_o25 = calcular_stake_kelly(
-                prob_over_2_5, bookie_odd_o25, banca_inicial, stake_pct_max
-            )
-            val_u55 = calcular_stake_kelly(
-                prob_under_5_5 * 100,
-                bookie_odd_u55,
-                banca_inicial,
-                stake_pct_max,
-            )
-            val_btts = calcular_stake_kelly(
-                prob_btts_sim, bookie_odd_btts, banca_inicial, stake_pct_max
-            )
-            val_c75 = calcular_stake_kelly(
-                prob_over_7_5_corners,
-                bookie_odd_c75,
-                banca_inicial,
-                stake_pct_max,
-            )
-            val_u145 = calcular_stake_kelly(
-                prob_under_14_5_corners,
-                bookie_odd_u145,
-                banca_inicial,
-                stake_pct_max,
-            )
-
-            tabela_dados = [
-                {
-                    "Mercado Base": "Over 1.5 Golos",
-                    "Probabilidade": f"{prob_over_1_5:.1f}%",
-                    "Odd Justa (Modelo)": f"{odd_over_1_5:.2f}",
-                    "Odd Casa de Apostas": f"{bookie_odd_o15:.2f}",
-                    "Valor (+EV / Edge)": f"{edge_o15:+.2f}%",
-                    "Aposta Dinâmica (Kelly)": f"{val_o15:.2f} €",
-                    "Recomendação": (
-                        "🔥 VALOR" if edge_o15 > 0 else "❌ Sem Valor"
-                    ),
-                },
-                {
-                    "Mercado Base": "Over 2.5 Golos",
-                    "Probabilidade": f"{prob_over_2_5:.1f}%",
-                    "Odd Justa (Modelo)": f"{odd_over_2_5:.2f}",
-                    "Odd Casa de Apostas": f"{bookie_odd_o25:.2f}",
-                    "Valor (+EV / Edge)": f"{edge_o25:+.2f}%",
-                    "Aposta Dinâmica (Kelly)": f"{val_o25:.2f} €",
-                    "Recomendação": (
-                        "🔥 VALOR" if edge_o25 > 0 else "❌ Sem Valor"
-                    ),
-                },
-                {
-                    "Mercado Base": "Under 5.5 Golos",
-                    "Probabilidade": f"{prob_under_5_5*100:.1f}%",
-                    "Odd Justa (Modelo)": f"{odd_under_5_5:.2f}",
-                    "Odd Casa de Apostas": f"{bookie_odd_u55:.2f}",
-                    "Valor (+EV / Edge)": f"{edge_u55:+.2f}%",
-                    "Aposta Dinâmica (Kelly)": f"{val_u55:.2f} €",
-                    "Recomendação": (
-                        "🔥 VALOR" if edge_u55 > 0 else "❌ Sem Valor"
-                    ),
-                },
-                {
-                    "Mercado Base": "Ambas Marcam (BTTS)",
-                    "Probabilidade": f"{prob_btts_sim:.1f}%",
-                    "Odd Justa (Modelo)": f"{odd_btts:.2f}",
-                    "Odd Casa de Apostas": f"{bookie_odd_btts:.2f}",
-                    "Valor (+EV / Edge)": f"{edge_btts:+.2f}%",
-                    "Aposta Dinâmica (Kelly)": f"{val_btts:.2f} €",
-                    "Recomendação": (
-                        "🔥 VALOR" if edge_btts > 0 else "❌ Sem Valor"
-                    ),
-                },
-                {
-                    "Mercado Base": "Over 7.5 Cantos",
-                    "Probabilidade": f"{prob_over_7_5_corners:.1f}%",
-                    "Odd Justa (Modelo)": f"{odd_over_7_5_corners:.2f}",
-                    "Odd Casa de Apostas": f"{bookie_odd_c75:.2f}",
-                    "Valor (+EV / Edge)": f"{edge_c75:+.2f}%",
-                    "Aposta Dinâmica (Kelly)": f"{val_c75:.2f} €",
-                    "Recomendação": (
-                        "🔥 VALOR" if edge_c75 > 0 else "❌ Sem Valor"
-                    ),
-                },
-                {
-                    "Mercado Base": "Under 14.5 Cantos",
-                    "Probabilidade": f"{prob_under_14_5_corners:.1f}%",
-                    "Odd Justa (Modelo)": f"{odd_under_14_5_corners:.2f}",
-                    "Odd Casa de Apostas": f"{bookie_odd_u145:.2f}",
-                    "Valor (+EV / Edge)": f"{edge_u145:+.2f}%",
-                    "Aposta Dinâmica (Kelly)": f"{val_u145:.2f} €",
-                    "Recomendação": (
-                        "🔥 VALOR" if edge_u145 > 0 else "❌ Sem Valor"
-                    ),
-                },
-            ]
-
-            df_tabela = pd.DataFrame(tabela_dados)
-            st.dataframe(df_tabela, use_container_width=True, hide_index=True)
-
-        else:
-            st.info("ℹ️ Selecione equipas válidas para calcular as estatísticas.")
-    else:
-        st.warning("⚠️ Sem dados disponíveis para esta competição.")
+    df_resumo = pd.DataFrame(dados_tabela)
+    st.dataframe(df_resumo, use_container_width=True)
