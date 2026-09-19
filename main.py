@@ -13,14 +13,13 @@ st.set_page_config(page_title="Análise Desportiva 26/27", layout="wide")
 
 @st.cache_resource
 def carregar_leitor_ocr():
-    # Inicializa o leitor de OCR para Português/Inglês
     return easyocr.Reader(['pt', 'en'], gpu=False)
 
 
 def extrair_odds_inteligente(imagem_pil):
     """
-    Lê a imagem carregada com detalhe (bounding boxes) para associar rótulos de mercados
-    às odds numéricas correspondentes de forma inteligente e contextual.
+    Lê a imagem agrupando por linhas visuais (coordenada Y) e separando
+    a coluna esquerda (Acima/Over) da coluna direita (Menos/Under).
     """
     reader = carregar_leitor_ocr()
     imagem_bytes = io.BytesIO()
@@ -33,10 +32,11 @@ def extrair_odds_inteligente(imagem_pil):
         y_coords = [p[1] for p in bbox]
         x_center = sum(x_coords) / len(x_coords)
         y_center = sum(y_coords) / len(y_coords)
-        items.append({"text": text.lower(), "x": x_center, "y": y_center})
+        items.append({"text": text.strip(), "x": x_center, "y": y_center})
 
     padrao_odd = re.compile(r"^\d{1,2}[\.,]\d{2}$")
 
+    # Dicionário para armazenar o que encontrarmos
     odds_mapeadas = {
         "o15": None,
         "o25": None,
@@ -46,53 +46,79 @@ def extrair_odds_inteligente(imagem_pil):
         "u145": None,
     }
 
-    odds_detectadas_lista = []
-    for item in items:
-        cleaned = item["text"].replace(",", ".")
-        if padrao_odd.match(cleaned) or re.match(r"^\d{1,2}\.\d{2}$", cleaned):
-            try:
-                val = float(cleaned)
-                if 1.01 <= val <= 50.0:
-                    item["val"] = val
-                    odds_detectadas_lista.append(item)
-            except:
-                pass
+    # Agrupar elementos por linhas verticais aproximadas (tolerância de ~15 pixels)
+    linhas = []
+    items_ordenados = sorted(items, key=lambda k: k["y"])
 
-    # Associação por proximidade espacial e palavras-chave
-    for item in items:
-        t = item["text"]
-        target_key = None
-        if "1.5" in t or "1,5" in t:
-            if "menos" not in t and "under" not in t:
-                target_key = "o15"
-        elif "2.5" in t or "2,5" in t:
-            if "menos" not in t and "under" not in t:
-                target_key = "o25"
-        elif "5.5" in t or "5,5" in t or "menos de 5" in t:
-            target_key = "u55"
-        elif "btts" in t or "ambas" in t or "marcam" in t:
-            target_key = "btts"
-        elif "cantos" in t or "canto" in t:
-            if "7.5" in t or "7,5" in t:
-                target_key = "c75"
-            elif "14.5" in t or "14,5" in t:
-                target_key = "u145"
+    for item in items_ordenados:
+        colocado = False
+        for linha in linhas:
+            if abs(linha["y_medio"] - item["y"]) < 18:
+                linha["elementos"].append(item)
+                linha["y_medio"] = sum(e["y"] for e in linha["elementos"]) / len(
+                    linha["elementos"]
+                )
+                colocado = True
+                break
+        if not colocado:
+            linhas.append({"y_medio": item["y"], "elementos": [item]})
 
-        if target_key and not odds_mapeadas[target_key]:
-            best_odd = None
-            min_dist = float("inf")
-            for odd_item in odds_detectadas_lista:
-                dx = odd_item["x"] - item["x"]
-                dy = abs(odd_item["y"] - item["y"])
-                if dy < 35:  # Proximidade vertical na mesma linha visual
-                    dist = abs(dx) + dy * 2
-                    if dist < min_dist:
-                        min_dist = dist
-                        best_odd = odd_item["val"]
-            if best_odd:
-                odds_mapeadas[target_key] = best_odd
+    all_raw_odds = []
 
-    all_raw_odds = [o["val"] for o in odds_detectadas_lista]
+    # Analisar cada linha detetada na imagem
+    for linha in linhas:
+        # Ordenar elementos da linha da esquerda para a direita (por X)
+        elems = sorted(linha["elementos"], key=lambda e: e["x"])
+
+        texto_linha = " ".join([e["text"].lower() for e in elems])
+
+        # Extrair números que parecem odds nesta linha
+        odds_na_linha = []
+        for e in elems:
+            cleaned = e["text"].replace(",", ".")
+            if padrao_odd.match(cleaned) or re.match(r"^\d{1,2}\.\d{2}$", cleaned):
+                try:
+                    val = float(cleaned)
+                    if 1.01 <= val <= 50.0:
+                        odds_na_linha.append((e["x"], val))
+                        all_raw_odds.append(val)
+                except:
+                    pass
+
+        # Identificar o contexto da linha
+        if "1.5" in texto_linha or "1,5" in texto_linha:
+            # Separar esquerda (Over) e direita (Under) pelo centro da imagem (~X)
+            for x_pos, val in odds_na_linha:
+                if x_pos < 300:  # Lado esquerdo (Acima 1.5)
+                    odds_mapeadas["o15"] = val
+                elif x_pos >= 300:  # Lado direito (Menos de 1.5)
+                    pass
+
+        elif "2.5" in texto_linha or "2,5" in texto_linha:
+            for x_pos, val in odds_na_linha:
+                if x_pos < 300:  # Lado esquerdo (Acima 2.5)
+                    odds_mapeadas["o25"] = val
+
+        elif "5" in texto_linha or "5.5" in texto_linha or "5,5" in texto_linha:
+            for x_pos, val in odds_na_linha:
+                # No teu print, "Menos de 5" está no lado direito da última linha de golos
+                if x_pos >= 300:
+                    odds_mapeadas["u55"] = val
+                elif odds_mapeadas["u55"] is None:
+                    odds_mapeadas["u55"] = val
+
+        elif "btts" in texto_linha or "ambas" in texto_linha or "marcam" in texto_linha:
+            if odds_na_linha:
+                odds_mapeadas["btts"] = odds_na_linha[0][1]
+
+        elif "cantos" in texto_linha or "canto" in texto_linha:
+            if "7.5" in texto_linha or "7,5" in texto_linha:
+                if odds_na_linha:
+                    odds_mapeadas["c75"] = odds_na_linha[0][1]
+            elif "14.5" in texto_linha or "14,5" in texto_linha:
+                if odds_na_linha:
+                    odds_mapeadas["u145"] = odds_na_linha[0][1]
+
     return odds_mapeadas, all_raw_odds
 
 
@@ -642,14 +668,11 @@ if selected_league:
                 type=["png", "jpg", "jpeg"],
             )
 
-            # Leitura OCR Inteligente e preenchimento de variáveis
             if uploaded_file is not None:
                 image = Image.open(uploaded_file)
                 st.image(image, caption="Print Carregado", width=400)
 
-                with st.spinner(
-                    "🔍 A ler odds da imagem via OCR Inteligente..."
-                ):
+                with st.spinner("🔍 A ler a tabela do print via OCR..."):
                     odds_mapeadas, odds_detetadas = extrair_odds_inteligente(
                         image
                     )
@@ -659,44 +682,18 @@ if selected_league:
                         f"📸 Odds detetadas na imagem: {odds_detetadas}"
                     )
 
-                    # Atribuição baseada no mapeamento inteligente por contexto
-                    if odds_mapeadas.get("o15"):
+                    if odds_mapeadas.get("o15") is not None:
                         defval_o15 = odds_mapeadas["o15"]
-                    if odds_mapeadas.get("o25"):
+                    if odds_mapeadas.get("o25") is not None:
                         defval_o25 = odds_mapeadas["o25"]
-                    if odds_mapeadas.get("u55"):
+                    if odds_mapeadas.get("u55") is not None:
                         defval_u55 = odds_mapeadas["u55"]
-                    if odds_mapeadas.get("btts"):
+                    if odds_mapeadas.get("btts") is not None:
                         defval_btts = odds_mapeadas["btts"]
-                    if odds_mapeadas.get("c75"):
+                    if odds_mapeadas.get("c75") is not None:
                         defval_c75 = odds_mapeadas["c75"]
-                    if odds_mapeadas.get("u145"):
+                    if odds_mapeadas.get("u145") is not None:
                         defval_u145 = odds_mapeadas["u145"]
-
-                    # Fallback sequencial para preencher campos não mapeados textualmente
-                    mapped_vals = [
-                        v for v in odds_mapeadas.values() if v is not None
-                    ]
-                    remaining_odds = [
-                        o for o in odds_detetadas if o not in mapped_vals
-                    ]
-                    keys_order = ["o15", "o25", "u55", "btts", "c75", "u145"]
-
-                    for k in keys_order:
-                        if odds_mapeadas[k] is None and remaining_odds:
-                            val_escolhido = remaining_odds.pop(0)
-                            if k == "o15":
-                                defval_o15 = val_escolhido
-                            elif k == "o25":
-                                defval_o25 = val_escolhido
-                            elif k == "u55":
-                                defval_u55 = val_escolhido
-                            elif k == "btts":
-                                defval_btts = val_escolhido
-                            elif k == "c75":
-                                defval_c75 = val_escolhido
-                            elif k == "u145":
-                                defval_u145 = val_escolhido
                 else:
                     st.warning(
                         "⚠️ Nenhuma odd válida encontrada na imagem. A usar valores padrão."
