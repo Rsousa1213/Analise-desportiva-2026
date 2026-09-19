@@ -1,8 +1,7 @@
 import base64
 from io import BytesIO
 import json
-from google import genai
-from google.genai import types
+import urllib.request
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -442,9 +441,6 @@ if uploaded_prints:
   else:
     st.sidebar.info("🤖 A analisar os prints com Inteligência Artificial...")
     try:
-      # Inicialização segura com o SDK oficial google-genai
-      client = genai.Client(api_key=gemini_api_key)
-
       for print_file in uploaded_prints:
         imagem = Image.open(print_file)
         st.sidebar.image(
@@ -460,6 +456,10 @@ if uploaded_prints:
         elif imagem.mode != "RGB":
           imagem = imagem.convert("RGB")
 
+        buffered = BytesIO()
+        imagem.save(buffered, format="JPEG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
         prompt_extracao = """
                 Analisa esta imagem de uma casa de apostas desportivas. 
                 Identifica e extrai os valores numéricos das odds para os seguintes mercados (se presentes):
@@ -471,18 +471,45 @@ if uploaded_prints:
                 Devolve o resultado estritamente em formato JSON com chaves em minúsculas e valores numéricos em float (ex: {"over_15": 1.30, "over_25": 1.85, "btts_sim": 1.75, "cantos_over": 1.90}). Se algum mercado não estiver visível, omite-o.
                 """
 
-        # Chamada direta via SDK oficial do Gemini
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[prompt_extracao, imagem],
+        # Abordagem via REST integrada compatível com o Streamlit Cloud sem falhas de importação
+        url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": prompt_extracao},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": img_base64,
+                        }
+                    },
+                ]
+            }]
+        }
+
+        req = urllib.request.Request(
+            url_api,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
         )
 
-        texto_resposta = response.text
-        texto_limpo = (
-            texto_resposta.replace("```json", "").replace("```", "").strip()
-        )
-        dados_lidos = json.loads(texto_limpo)
-        odds_extraidas.update(dados_lidos)
+        with urllib.request.urlopen(req) as response:
+          resposta_json = json.loads(response.read().decode("utf-8"))
+          texto_resposta = (
+              resposta_json.get("candidates", [{}])[0]
+              .get("content", {})
+              .get("parts", [{}])[0]
+              .get("text", "{}")
+          )
+
+          texto_limpo = (
+              texto_resposta.replace("```json", "")
+              .replace("```", "")
+              .strip()
+          )
+          dados_lidos = json.loads(texto_limpo)
+          odds_extraidas.update(dados_lidos)
 
       st.sidebar.success("✅ Odds extraídas com sucesso via IA!")
       st.sidebar.json(odds_extraidas)
