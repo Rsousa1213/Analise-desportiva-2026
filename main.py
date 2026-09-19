@@ -1,8 +1,19 @@
+from io import BytesIO
+import json
 import numpy as np
 import pandas as pd
 from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
+
+# Importação da API do Gemini para leitura visual dos prints
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    st.error(
+        "A biblioteca 'google-genai' não está instalada. Corre `pip install google-genai` no teu terminal."
+    )
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(
@@ -51,7 +62,7 @@ def aplicar_estilo_visual():
 
 aplicar_estilo_visual()
 
-st.title("⚽ Análise Desportiva 26/27")
+st.title("⚽ Análise Desportiva 26/27 (Com Leitura Automática por IA)")
 st.markdown(
     "Análise Avançada com Foco em **Golos, BTTS, Cantos & Critério de Kelly**"
 )
@@ -416,28 +427,79 @@ stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5
 )
 
-# Secção na barra lateral para carregar e inspecionar os prints
+# Secção na barra lateral para carregar prints e extrair com IA
 st.sidebar.markdown("---")
-st.sidebar.subheader("📸 Prints das Casas de Apostas")
+st.sidebar.subheader("📸 Leitura Automática de Prints (IA)")
 uploaded_prints = st.sidebar.file_uploader(
-    "Carregar Prints (PNG/JPG)",
+    "Carregar Prints das Odds (PNG/JPG)",
     type=["png", "jpg", "jpeg"],
     accept_multiple_files=True,
 )
 
+# Dicionário para armazenar odds extraídas automaticamente pela IA
+odds_extraidas = {}
+
 if uploaded_prints:
-    st.sidebar.success(f"✅ {len(uploaded_prints)} print(s) carregado(s).")
-    for idx, print_file in enumerate(uploaded_prints):
-        # Mostra o print redimensionado para consulta visual imediata
-        imagem = Image.open(print_file)
-        st.sidebar.image(
-            imagem,
-            caption=f"Print {idx+1}: {print_file.name}",
-            use_container_width=True,
-        )
-        st.sidebar.markdown(
-            "<small><i>Dica: Lê as odds da imagem e insere-as nos campos à direita para calcular o valor real (+EV).</i></small>",
-            unsafe_allow_html=True,
+    st.sidebar.info(
+        "🤖 A analisar os prints com Inteligência Artificial..."
+    )
+    try:
+        # Inicializa o cliente do Gemini (procura automaticamente pela variável de ambiente GEMINI_API_KEY)
+        client = genai.Client()
+
+        for print_file in uploaded_prints:
+            imagem = Image.open(print_file)
+            st.sidebar.image(
+                imagem, caption=f"Print: {print_file.name}", use_container_width=True
+            )
+
+            # Prepara a imagem para envio à API do Gemini
+            buffered = BytesIO()
+            imagem.save(buffered, format="JPEG")
+            img_bytes = buffered.getvalue()
+
+            prompt_extracao = """
+            Analisa esta imagem de uma casa de apostas desportivas. 
+            Identifica e extrai os valores numéricos das odds para os seguintes mercados (se presentes):
+            - Over 1.5 (Mais de 1.5 golos)
+            - Over 2.5 (Mais de 2.5 golos)
+            - Under 5.5 (Menos de 5.5 golos)
+            - BTTS / Ambas Marcam (Sim)
+            - Over 7.5 Cantos
+            - Under 14.5 Cantos
+
+            Retorna APENAS um objeto JSON válido (sem markdown extra, sem texto adicional) com chaves em minúsculas:
+            {"over_15": 0.0, "over_25": 0.0, "under_55": 0.0, "btts": 0.0, "cantos_75": 0.0, "cantos_145": 0.0}
+            Se alguma odd não estiver visível na imagem, coloca o valor 0.0 para essa chave.
+            """
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[
+                    types.Part.from_bytes(
+                        data=img_bytes, mime_type="image/jpeg"
+                    ),
+                    prompt_extracao,
+                ],
+            )
+
+            # Tenta limpar e converter a resposta da IA em dicionário JSON
+            texto_resp = response.text.strip()
+            if texto_resp.startswith("```json"):
+                texto_resp = texto_resp[7:-3].strip()
+            elif texto_resp.startswith("```"):
+                texto_resp = texto_resp[3:-3].strip()
+
+            dados_json = json.loads(texto_resp)
+            for k, v in dados_json.items():
+                if isinstance(v, (int, float)) and v > 1.0:
+                    odds_extraidas[k] = float(v)
+
+        if odds_extraidas:
+            st.sidebar.success("✨ Odds lidas e aplicadas automaticamente!")
+    except Exception as e:
+        st.sidebar.warning(
+            f"⚠️ Não foi possível extrair automaticamente via IA (verifica a chave API do Gemini). Erro: {e}"
         )
 
 if selected_league:
@@ -558,29 +620,41 @@ if selected_league:
                 else 0
             )
 
-            defval_o15 = float(
-                np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0)
+            # Valores padrão baseados no modelo (caso a IA não encontre ou não haja prints)
+            defval_o15 = odds_extraidas.get(
+                "over_15",
+                float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0)),
             )
-            defval_o25 = float(
-                np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0)
+            defval_o25 = odds_extraidas.get(
+                "over_25",
+                float(np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0)),
             )
-            defval_u55 = float(
-                np.clip(round(odd_under_5_5 + 0.1, 2), 1.01, 50.0)
+            defval_u55 = odds_extraidas.get(
+                "under_55",
+                float(np.clip(round(odd_under_5_5 + 0.1, 2), 1.01, 50.0)),
             )
-            defval_btts = float(np.clip(round(odd_btts + 0.1, 2), 1.01, 50.0))
-            defval_c75 = float(
-                np.clip(round(odd_over_7_5_corners + 0.1, 2), 1.01, 50.0)
+            defval_btts = odds_extraidas.get(
+                "btts", float(np.clip(round(odd_btts + 0.1, 2), 1.01, 50.0))
             )
-            defval_u145 = float(
-                np.clip(round(odd_under_14_5_corners + 0.1, 2), 1.01, 50.0)
+            defval_c75 = odds_extraidas.get(
+                "cantos_75",
+                float(
+                    np.clip(round(odd_over_7_5_corners + 0.1, 2), 1.01, 50.0)
+                ),
+            )
+            defval_u145 = odds_extraidas.get(
+                "cantos_145",
+                float(
+                    np.clip(round(odd_under_14_5_corners + 0.1, 2), 1.01, 50.0)
+                ),
             )
 
             st.markdown("---")
             st.subheader(
-                "🎯 Inserção de Odds da Casa de Apostas (Baseado nos Prints)"
+                "🎯 Odds Preenchidas Automaticamente (via Leitura de Prints por IA)"
             )
             st.markdown(
-                "Consulta os teus prints na barra lateral esquerda e ajusta os campos abaixo com as odds reais da tua casa de apostas:"
+                "Podes verificar ou alterar manualmente os valores abaixo conforme necessário:"
             )
 
             bc1, bc2, bc3, bc4, bc5, bc6 = st.columns(6)
