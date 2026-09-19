@@ -411,6 +411,19 @@ stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5
 )
 
+# Secção opcional na barra lateral para carregar o print apenas para visualização
+st.sidebar.markdown("---")
+st.sidebar.subheader("📸 Visualizar Print da Casa de Apostas")
+uploaded_print = st.sidebar.file_uploader(
+    "Carregar Print (PNG/JPG)", type=["png", "jpg", "jpeg"]
+)
+if uploaded_print is not None:
+    st.sidebar.image(
+        uploaded_print,
+        caption="Print Carregado para Consulta",
+        use_container_width=True,
+    )
+
 if selected_league:
     teams_list = LEAGUES_CONFIG[selected_league]["teams"]
     df = carregar_dados_reais(selected_league, teams_list)
@@ -548,10 +561,10 @@ if selected_league:
 
             st.markdown("---")
             st.subheader(
-                "🎯 Inserção de Odds da Casa de Apostas (Sem Erros de OCR)"
+                "🎯 Inserção de Odds da Casa de Apostas (Consulta por Print)"
             )
             st.markdown(
-                "Os campos abaixo já vêm pré-preenchidos com as odds justas calculadas pelo modelo estatístico. Basta olhar para o seu print/ecrã e ajustar rapidamente os valores conforme a casa de apostas:"
+                "Pode carregar o seu print na barra lateral para consulta visual. Os campos abaixo vêm pré-preenchidos com as odds justas calculadas pelo modelo:"
             )
 
             bc1, bc2, bc3, bc4, bc5, bc6 = st.columns(6)
@@ -688,17 +701,29 @@ if selected_league:
                     ),
                 },
                 {
-                    "Mercado Base": "Under 14.5 Cantos",
-                    "Probabilidade": f"{prob_under_14_5_corners:.1f}%",
-                    "Odd Justa (Modelo)": f"{odd_under_14_5_corners:.2f}",
-                    "Odd Casa de Apostas": f"{bookie_odd_u145:.2f}",
-                    "Valor (+EV / Edge)": f"{edge_u145:+.2f}%",
-                    "Aposta Dinâmica (Kelly)": f"{val_u145:.2f} €",
-                    "Recomendação": (
-                        "🔥 VALOR" if edge_u145 > 0 else "❌ Sem Valor"
-                    ),
+                    "Mercado Base": "Over 14.5 Cantos"
+                    if False
+                    else {
+                        "Mercado Base": "Under 14.5 Cantos",
+                        "Probabilidade": f"{prob_under_14_5_corners:.1f}%",
+                        "Odd Justa (Modelo)": f"{odd_under_14_5_corners:.2f}",
+                        "Odd Casa de Apostas": f"{bookie_odd_u145:.2f}",
+                        "Valor (+EV / Edge)": f"{edge_u145:+.2f}%",
+                        "Aposta Dinâmica (Kelly)": f"{val_u145:.2f} €",
+                    },
                 },
             ]
+
+            # Ajuste correto da linha final da tabela
+            tabela_dados[-1] = {
+                "Mercado Base": "Under 14.5 Cantos",
+                "Probabilidade": f"{prob_under_14_5_corners:.1f}%",
+                "Odd Justa (Modelo)": f"{odd_under_14_5_png if 'odd_under_14_5_png' in locals() else odd_under_14_5_corners:.2f}",
+                "Odd Casa de Apostas": f"{bookie_odd_u145:.2f}",
+                "Valor (+EV / Edge)": f"{edge_u145:+.2f}%",
+                "Aposta Dinâmica (Kelly)": f"{val_u145:.2f} €",
+                "Recomendação": ("🔥 VALOR" if edge_u145 > 0 else "❌ Sem Valor"),
+            }
 
             df_tabela = pd.DataFrame(tabela_dados)
             st.dataframe(df_tabela, use_container_width=True, hide_index=True)
