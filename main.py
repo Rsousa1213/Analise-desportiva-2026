@@ -469,15 +469,16 @@ if uploaded_prints:
                 prompt_extracao = """
                 Analisa esta imagem de uma casa de apostas desportivas. 
                 Identifica e extrai os valores numéricos das odds para os seguintes mercados (se presentes):
-                - Over 1.5
-                - Over 2.5
-                - Under 2.5
-                - BTTS (Ambas Marcam Sim)
-                - Cantos Over 8.5 / 9.5
-                Devolve o resultado estritamente em formato JSON com chaves em minúsculas e valores numéricos em float (ex: {"over_15": 1.30, "over_25": 1.85, "btts_sim": 1.75}). Se algum mercado não estiver visível, omite-o.
+                - Over 1.5 golos
+                - Over 2.5 golos
+                - Under 2.5 golos
+                - BTTS / Ambas Marcam (Sim)
+                - Cantos Over 8.5 / 9.5 (ou o valor de cantos visível)
+                Devolve o resultado estritamente em formato JSON com chaves em minúsculas e valores numéricos em float (ex: {"over_15": 1.30, "over_25": 1.85, "btts_sim": 1.75, "cantos_over": 1.90}). Se algum mercado não estiver visível, omite-o.
                 """
 
-                url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
+                # Utilizando gemini-2.5-flash atualizado
+                url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
                 payload = {
                     "contents": [{
                         "parts": [
@@ -510,7 +511,6 @@ if uploaded_prints:
                         .get("text", "{}")
                     )
 
-                    # Limpar formatação Markdown caso venha envolvido em blocos ```json ... ```
                     texto_limpo = (
                         texto_resposta.replace("```json", "")
                         .replace("```", "")
@@ -546,7 +546,7 @@ with col2:
 if home_team == away_team:
     st.warning("⚠️ Seleciona duas equipas diferentes para realizar a análise.")
 else:
-    # Cálculo de Médias Históricas
+    # Cálculo de Médias Históricas (Golos)
     media_h_gs = df_liga[df_liga["HomeTeam"] == home_team]["FTHG"].mean()
     media_h_gc = df_liga[df_liga["HomeTeam"] == home_team]["FTAG"].mean()
     media_a_gs = df_liga[df_liga["AwayTeam"] == away_team]["FTAG"].mean()
@@ -562,16 +562,25 @@ else:
         0.5, (media_a_gs / media_gols_geral_a) * (media_h_gc / media_gols_geral_h) * media_gols_geral_a
     )
 
-    # Simulação Poisson de Placares
+    # Cálculo de Médias Históricas (Cantos)
+    media_hc_pro = df_liga[df_liga["HomeTeam"] == home_team]["HC"].mean()
+    media_ac_contra = df_liga[df_liga["AwayTeam"] == away_team]["AC"].mean()
+    media_ac_pro = df_liga[df_liga["AwayTeam"] == away_team]["AC"].mean()
+    media_hc_contra = df_liga[df_liga["HomeTeam"] == home_team]["HC"].mean()
+
+    lambda_cantos_home = max(3.0, (media_hc_pro + media_ac_contra) / 2)
+    lambda_cantos_away = max(2.5, (media_ac_pro + media_hc_contra) / 2)
+    lambda_total_cantos = lambda_cantos_home + lambda_cantos_away
+
+    # Probabilidade Poisson para Cantos (Over 8.5 Cantos)
+    prob_cantos_over_85 = 1 - poisson.cdf(8, lambda_total_cantos)
+
+    # Simulação Poisson de Placares (Golos)
     max_goals = 6
     matriz_prob = np.outer(
         poisson.pmf(np.arange(max_goals + 1), lambda_home),
         poisson.pmf(np.arange(max_goals + 1), lambda_away),
     )
-
-    prob_home_win = np.sum(np.tril(matriz_prob, -1))
-    prob_draw = np.sum(np.diag(matriz_prob))
-    prob_away_win = np.sum(np.triu(matriz_prob, 1))
 
     prob_over_15 = 1 - np.sum(matriz_prob[0, 0]) - np.sum(matriz_prob[0, 1]) - np.sum(matriz_prob[1, 0])
     prob_over_25 = 1 - np.sum(matriz_prob[0:2, 0:2])
@@ -586,14 +595,19 @@ else:
     m3.metric("Prob. Over 2.5", f"{prob_over_25*100:.1f}%")
     m4.metric("Prob. Ambas Marcam (BTTS)", f"{prob_btts*100:.1f}%")
 
+    m5, m6 = st.columns(2)
+    m5.metric("Esperança Total de Cantos", f"{lambda_total_cantos:.2f}")
+    m6.metric("Prob. Over 8.5 Cantos", f"{prob_cantos_over_85*100:.1f}%")
+
     st.markdown("---")
     st.subheader("💡 Sugestões de Valor & Critério de Kelly")
 
-    # Tabela de Mercados Analisados
+    # Tabela Unificada de Mercados (Golos + Cantos)
     mercados_analise = [
         {"Mercado": "Over 1.5 Golos", "Prob_Calc": prob_over_15, "Odd_Extraida": odds_extraidas.get("over_15", 1.35)},
         {"Mercado": "Over 2.5 Golos", "Prob_Calc": prob_over_25, "Odd_Extraida": odds_extraidas.get("over_25", 1.95)},
         {"Mercado": "Ambas Marcam (BTTS)", "Prob_Calc": prob_btts, "Odd_Extraida": odds_extraidas.get("btts_sim", 1.80)},
+        {"Mercado": "Cantos Over 8.5", "Prob_Calc": prob_cantos_over_85, "Odd_Extraida": odds_extraidas.get("cantos_over", 1.85)},
     ]
 
     dados_tabela = []
@@ -603,7 +617,7 @@ else:
         fair_odd = 1 / prob if prob > 0 else 99.0
         edge = (prob * odd) - 1  # Vantagem matemática
 
-        # Critério de Kelly Fracionado (¼ de Kelly para gestão segura)
+        # Critério de Kelly Fracionado (¼ de Kelly)
         kelly_fraction = (prob * odd - 1) / (odd - 1) if odd > 1 else 0
         stake_recomendada = max(0.0, banca_inicial * (kelly_fraction / 4))
         stake_recomendada = min(stake_recomendada, banca_inicial * (stake_pct_max / 100))
