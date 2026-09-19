@@ -452,7 +452,6 @@ if uploaded_prints:
                     use_container_width=True,
                 )
 
-                # Tratamento de Transparência RGBA para JPEG
                 if imagem.mode in ("RGBA", "LA"):
                     fundo = Image.new("RGB", imagem.size, (255, 255, 255))
                     fundo.paste(imagem, mask=imagem.split()[3])
@@ -477,8 +476,8 @@ if uploaded_prints:
                 Devolve o resultado estritamente em formato JSON com chaves em minúsculas e valores numéricos em float (ex: {"over_15": 1.30, "over_25": 1.85, "btts_sim": 1.75, "cantos_over": 1.90}). Se algum mercado não estiver visível, omite-o.
                 """
 
-                # Utilizando gemini-2.5-flash atualizado
-                url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
+                # Endpoint REST estável corrigido para v1
+                url_api = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
                 payload = {
                     "contents": [{
                         "parts": [
@@ -523,7 +522,9 @@ if uploaded_prints:
             st.sidebar.json(odds_extraidas)
 
         except Exception as e:
-            st.sidebar.error(f"❌ Erro ao processar com a IA: {e}")
+            st.sidebar.error(
+                f"❌ Erro ao processar com a IA (Verifica se a chave API está correta): {e}"
+            )
 
 # 3. Corpo Principal - Análise de Jogos
 teams_available = LEAGUES_CONFIG[selected_league]["teams"]
@@ -602,7 +603,7 @@ else:
     st.markdown("---")
     st.subheader("💡 Sugestões de Valor & Critério de Kelly")
 
-    # Tabela Unificada de Mercados (Golos + Cantos)
+    # Tabela Unificada de Mercados (Golos + Cantos) com suporte a leitura por IA
     mercados_analise = [
         {"Mercado": "Over 1.5 Golos", "Prob_Calc": prob_over_15, "Odd_Extraida": odds_extraidas.get("over_15", 1.35)},
         {"Mercado": "Over 2.5 Golos", "Prob_Calc": prob_over_25, "Odd_Extraida": odds_extraidas.get("over_25", 1.95)},
