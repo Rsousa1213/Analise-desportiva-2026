@@ -471,8 +471,8 @@ if uploaded_prints:
                 Devolve o resultado estritamente em formato JSON com chaves em minúsculas e valores numéricos em float (ex: {"over_15": 1.30, "over_25": 1.85, "btts_sim": 1.75, "cantos_over": 1.90}). Se algum mercado não estiver visível, omite-o.
                 """
 
-        # Abordagem via REST integrada compatível com o Streamlit Cloud sem falhas de importação
-        url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
+        # Utilização do modelo oficial gemini-1.5-flash via REST API
+        url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
         payload = {
             "contents": [{
                 "parts": [
