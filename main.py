@@ -6,14 +6,6 @@ from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
 
-# Tentar importar biblioteca de OCR se disponível
-try:
-  import pytesseract
-
-  HAS_TESSERACT = True
-except ImportError:
-  HAS_TESSERACT = False
-
 # 1. Configuração da Página
 st.set_page_config(page_title="Análise Desportiva 26/27", layout="wide")
 
@@ -535,12 +527,10 @@ if selected_league:
       )
 
       st.markdown("---")
-      st.subheader(
-          "📸 Captura Rápida de Odds (Upload de Print / Captura de Ecrã)"
-      )
+      st.subheader("📸 Consulta por Print / Imagem das Odds")
       st.markdown(
-          "Se não consegues copiar com o Ctrl+C da Captains, tira um print"
-          " rápido da zona das odds e carrega a imagem aqui em baixo:"
+          "Carrega o print que tiraste da Captains para teres a imagem de"
+          " referência lado a lado:"
       )
 
       uploaded_file = st.file_uploader(
@@ -550,36 +540,30 @@ if selected_league:
 
       if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(
-            image, caption="Print Carregado", width=400
+        st.image(image, caption="Print Carregado", width=400)
+
+      # Caixa de Colagem Rápida Inteligente
+      st.markdown("---")
+      st.info(
+          "💡 **Preenchimento Automático Relâmpago:** Olha para o teu print e"
+          " cola aqui todos os números das odds seguidos (exemplo: `2.1 1.74 1.1"
+          " 6.4 1.15 5.2`). A aplicação preenche tudo sozinha!"
+      )
+      texto_colado = st.text_input(
+          "Colar valores das odds em série (separados por espaços ou vírgulas):"
+      )
+
+      if texto_colado:
+        nums_colados = re.findall(
+            r"\b\d[.,]\d{1,2}\b", texto_colado.replace(",", ".")
         )
-        if HAS_TESSERACT:
-          try:
-            texto_ocr = pytesseract.image_to_string(image)
-            nums_ocr = re.findall(r"\b\d[.,]\d{2}\b", texto_ocr.replace(",", "."))
-            nums_ocr = [float(n) for n in nums_ocr]
-            if len(nums_ocr) >= 6:
-              st.success(
-                  f"✅ {len(nums_ocr)} odds detetadas com sucesso a partir da"
-                  " imagem!"
-              )
-              defval_o15, defval_o25, defval_u55, defval_btts, defval_c75, defval_u145 = (
-                  nums_ocr[:6]
-              )
-            else:
-              st.warning(
-                  "⚠️ A imagem foi lida, mas não encontrou 6 odds claras. Podes"
-                  " ajustar os valores manualmente em baixo."
-              )
-          except Exception:
-            st.error(
-                "Erro ao processar a imagem via OCR. Usa os campos manuais"
-                " abaixo."
-            )
-        else:
-          st.info(
-              "ℹ️ O módulo Tesseract OCR não está instalado no servidor, mas"
-              " podes preencher diretamente nos seletores abaixo."
+        nums_colados = [float(n) for n in nums_colados]
+        if len(nums_colados) >= 6:
+          defval_o15, defval_o25, defval_u55, defval_btts, defval_c75, defval_u145 = (
+              nums_colados[:6]
+          )
+          st.success(
+              "✅ 6 Odds detetadas e aplicadas automaticamente com sucesso!"
           )
 
       st.markdown("---")
