@@ -411,7 +411,7 @@ stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5
 )
 
-# Secção na barra lateral para introdução manual de odds
+# Secção na barra lateral para introdução manual de odds atualizada
 st.sidebar.markdown("---")
 st.sidebar.subheader("✏️ Inserção Manual de Odds")
 
@@ -424,8 +424,11 @@ odd_over_25 = st.sidebar.number_input(
 odd_btts = st.sidebar.number_input(
     "Odd Ambas Marcam (BTTS)", min_value=1.01, value=1.80, step=0.01
 )
-odd_cantos = st.sidebar.number_input(
-    "Odd Cantos Over 8.5", min_value=1.01, value=1.85, step=0.01
+odd_cantos_over_75 = st.sidebar.number_input(
+    "Odd Cantos Over 7.5", min_value=1.01, value=1.45, step=0.01
+)
+odd_cantos_under_145 = st.sidebar.number_input(
+    "Odd Cantos Under 14.5", min_value=1.01, value=1.25, step=0.01
 )
 
 # 3. Corpo Principal - Análise de Jogos
@@ -481,8 +484,9 @@ else:
   lambda_cantos_away = max(2.5, (media_ac_pro + media_hc_contra) / 2)
   lambda_total_cantos = lambda_cantos_home + lambda_cantos_away
 
-  # Probabilidade Poisson para Cantos (Over 8.5 Cantos)
-  prob_cantos_over_85 = 1 - poisson.cdf(8, lambda_total_cantos)
+  # Probabilidades Poisson para Cantos (Over 7.5 e Under 14.5)
+  prob_cantos_over_75 = 1 - poisson.cdf(7, lambda_total_cantos)
+  prob_cantos_under_145 = poisson.cdf(14, lambda_total_cantos)
 
   # Simulação Poisson de Placares (Golos)
   max_goals = 6
@@ -513,14 +517,15 @@ else:
   m3.metric("Prob. Over 2.5", f"{prob_over_25*100:.1f}%")
   m4.metric("Prob. Ambas Marcam (BTTS)", f"{prob_btts*100:.1f}%")
 
-  m5, m6 = st.columns(2)
+  m5, m6, m7 = st.columns(3)
   m5.metric("Esperança Total de Cantos", f"{lambda_total_cantos:.2f}")
-  m6.metric("Prob. Over 8.5 Cantos", f"{prob_cantos_over_85*100:.1f}%")
+  m6.metric("Prob. Cantos Over 7.5", f"{prob_cantos_over_75*100:.1f}%")
+  m7.metric("Prob. Cantos Under 14.5", f"{prob_cantos_under_145*100:.1f}%")
 
   st.markdown("---")
   st.subheader("💡 Sugestões de Valor & Critério de Kelly")
 
-  # Tabela Unificada de Mercados (Golos + Cantos) com as odds manuais
+  # Tabela Unificada de Mercados (Golos + Cantos)
   mercados_analise = [
       {
           "Mercado": "Over 1.5 Golos",
@@ -538,9 +543,14 @@ else:
           "Odd_Manual": odd_btts,
       },
       {
-          "Mercado": "Cantos Over 8.5",
-          "Prob_Calc": prob_cantos_over_85,
-          "Odd_Manual": odd_cantos,
+          "Mercado": "Cantos Over 7.5",
+          "Prob_Calc": prob_cantos_over_75,
+          "Odd_Manual": odd_cantos_over_75,
+      },
+      {
+          "Mercado": "Cantos Under 14.5",
+          "Prob_Calc": prob_cantos_under_145,
+          "Odd_Manual": odd_cantos_under_145,
       },
   ]
 
@@ -572,4 +582,3 @@ else:
 
   df_resumo = pd.DataFrame(dados_tabela)
   st.dataframe(df_resumo, use_container_width=True)
-    
