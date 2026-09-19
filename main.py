@@ -1,4 +1,3 @@
-Para resolver o problema definitivamente sem precisares de instalar pacotes externos no teu ambiente Python, podemos utilizar a biblioteca padrão urllib para fazer uma chamada HTTP direta à API do Gemini (gemini-2.5-flash), utilizando a tua chave de API diretamente.Copia e substitui todo o conteúdo do teu ficheiro por este código completo e atualizado:   Pythonimport base64
 from io import BytesIO
 import json
 import numpy as np
