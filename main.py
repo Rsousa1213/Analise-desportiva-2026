@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import pandas as pd
 from scipy.stats import poisson
@@ -377,7 +378,6 @@ def carregar_dados_reais(liga_nome, team_list):
     except Exception:
       df = None
 
-  # Fallback inteligente se o link remoto não existir ou falhar
   if df is None or df.empty:
     records = []
     np.random.seed(42)
@@ -409,10 +409,6 @@ banca_inicial = st.sidebar.number_input(
 )
 stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5
-)
-st.sidebar.info(
-    "A stake é calculada adaptando o Critério de Kelly fracionado de acordo com"
-    " a força do Edge (+EV)."
 )
 
 # 4. Corpo Principal
@@ -516,8 +512,7 @@ if selected_league:
 
       st.markdown("---")
       st.subheader(
-          f"📊 Análise Estatística (Baseada na Forma dos Últimos 5 Jogos):"
-          f" {home_team} vs {away_team}"
+          f"📊 Análise Estatística: {home_team} vs {away_team}"
       )
 
       col_m1, col_m2, col_m3, col_m4 = st.columns(4)
@@ -583,22 +578,24 @@ if selected_league:
         )
 
       st.markdown("---")
-      st.subheader("🎯 Comparador de Value Bets & Stake Ótima (Kelly)")
+      st.subheader("⚡ Importação Rápida de Odds (Copiar e Colar em Bloco)")
       st.markdown(
-          "Insere as **Odds da tua Casa de Apostas**. A stake em euros é"
-          " calculada otimizando o modelo de apostas com base no"
-          " **Edge (+EV)**."
+          "Copia o texto com as odds diretamente da Captains e cola-o aqui em"
+          " baixo. O sistema deteta automaticamente os números e preenche as"
+          " odds da casa de apostas!"
       )
 
-      defval_o15 = float(
-          np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0)
+      texto_colado = st.text_area(
+          "Cola o bloco de texto copiado da Captains:",
+          placeholder=(
+              "Exemplo: copia os mercados e odds da página e cola aqui..."
+          ),
       )
-      defval_o25 = float(
-          np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0)
-      )
-      defval_u55 = float(
-          np.clip(round(odd_under_5_5 + 0.1, 2), 1.01, 50.0)
-      )
+
+      # Valores por defeito calculados pelo modelo
+      defval_o15 = float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0))
+      defval_o25 = float(np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0))
+      defval_u55 = float(np.clip(round(odd_under_5_5 + 0.1, 2), 1.01, 50.0))
       defval_btts = float(np.clip(round(odd_btts + 0.1, 2), 1.01, 50.0))
       defval_c75 = float(
           np.clip(round(odd_over_7_5_corners + 0.1, 2), 1.01, 50.0)
@@ -606,6 +603,34 @@ if selected_league:
       defval_u145 = float(
           np.clip(round(odd_under_14_5_corners + 0.1, 2), 1.01, 50.0)
       )
+
+      # Se o utilizador colou texto, tentamos extrair números decimais válidos de odds (ex: 1.45, 2.10)
+      if texto_colado:
+        # Procura por números no formato X.XX
+        numeros_encontrados = re.findall(
+            r"\b\d[.,]\d{2}\b", texto_colado.replace(",", ".")
+        )
+        numeros_encontrados = [float(n) for n in numeros_encontrados]
+
+        if len(numeros_encontrados) >= 6:
+          st.success(
+              f"✅ Foram detetadas {len(numeros_encontrados)} odds no texto"
+              " colado! Aplicado automaticamente."
+          )
+          defval_o15 = numeros_encontrados[0]
+          defval_o25 = numeros_encontrados[1]
+          defval_u55 = numeros_encontrados[2]
+          defval_btts = numeros_encontrados[3]
+          defval_c75 = numeros_encontrados[4]
+          defval_u145 = numeros_encontrados[5]
+        else:
+          st.info(
+              "ℹ️ Cola mais texto ou preenche manualmente nos campos abaixo se"
+              " necessário."
+          )
+
+      st.markdown("---")
+      st.subheader("🎯 Comparador de Value Bets & Stake Ótima (Kelly)")
 
       bc1, bc2, bc3, bc4, bc5, bc6 = st.columns(6)
       with bc1:
@@ -712,7 +737,9 @@ if selected_league:
               "Odd Casa de Apostas": f"{bookie_odd_btts:.2f}",
               "Valor (+EV / Edge)": f"{edge_btts:+.2f}%",
               "Aposta Dinâmica (Kelly)": f"{val_btts:.2f} €",
-              "Recomendação": "🔥 VALOR" if edge_btts > 0 else "❌ Sem Valor",
+              "Recomendação": "🔥 VALOR" > 0 and edge_btts > 0
+              if "🔥 VALOR"
+              else "❌ Sem Valor",
           },
           {
               "Mercado Base": "Over 7.5 Cantos",
