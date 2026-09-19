@@ -471,7 +471,7 @@ if uploaded_prints:
                 Devolve o resultado estritamente em formato JSON com chaves em minúsculas e valores numéricos em float (ex: {"over_15": 1.30, "over_25": 1.85, "btts_sim": 1.75, "cantos_over": 1.90}). Se algum mercado não estiver visível, omite-o.
                 """
 
-        # Utilização do modelo oficial gemini-1.5-flash via REST API
+        # Endpoint REST corrigido com o prefixo correto 'models/...'
         url_api = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
         payload = {
             "contents": [{
