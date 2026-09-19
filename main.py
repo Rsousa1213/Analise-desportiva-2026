@@ -1,10 +1,5 @@
-import base64
-from io import BytesIO
-import json
-from google import genai
 import numpy as np
 import pandas as pd
-from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
 
@@ -55,7 +50,7 @@ def aplicar_estilo_visual():
 
 aplicar_estilo_visual()
 
-st.title("⚽ Análise Desportiva 26/27 (Leitura Automática por IA)")
+st.title("⚽ Análise Desportiva 26/27 (Inserção Manual de Odds)")
 st.markdown(
     "Análise Avançada com Foco em **Golos, BTTS, Cantos & Critério de Kelly**"
 )
@@ -416,82 +411,22 @@ stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5
 )
 
-# Secção na barra lateral para carregar prints e extrair com IA
+# Secção na barra lateral para introdução manual de odds
 st.sidebar.markdown("---")
-st.sidebar.subheader("📸 Leitura Automática de Prints (IA)")
+st.sidebar.subheader("✏️ Inserção Manual de Odds")
 
-gemini_api_key = st.sidebar.text_input(
-    "Chave API do Gemini", type="password", value=""
+odd_over_15 = st.sidebar.number_input(
+    "Odd Over 1.5 Golos", min_value=1.01, value=1.35, step=0.01
 )
-
-uploaded_prints = st.sidebar.file_uploader(
-    "Carregar Prints das Odds (PNG/JPG)",
-    type=["png", "jpg", "jpeg"],
-    accept_multiple_files=True,
+odd_over_25 = st.sidebar.number_input(
+    "Odd Over 2.5 Golos", min_value=1.01, value=1.95, step=0.01
 )
-
-odds_extraidas = {}
-
-if uploaded_prints:
-  if not gemini_api_key:
-    st.sidebar.warning(
-        "⚠️ Por favor, insere a tua chave API do Gemini para ativar a leitura"
-        " automática dos prints."
-    )
-  else:
-    st.sidebar.info("🤖 A analisar os prints com Inteligência Artificial...")
-    try:
-      # Inicializa o cliente oficial google-genai (compatível com chaves AQ...)
-      client = genai.Client(api_key=gemini_api_key)
-
-      for print_file in uploaded_prints:
-        imagem = Image.open(print_file)
-        st.sidebar.image(
-            imagem,
-            caption=f"Print: {print_file.name}",
-            use_container_width=True,
-        )
-
-        if imagem.mode in ("RGBA", "LA"):
-          fundo = Image.new("RGB", imagem.size, (255, 255, 255))
-          fundo.paste(imagem, mask=imagem.split()[3])
-          imagem = fundo
-        elif imagem.mode != "RGB":
-          imagem = imagem.convert("RGB")
-
-        prompt_extracao = """
-                Analisa esta imagem de uma casa de apostas desportivas. 
-                Identifica e extrai os valores numéricos das odds para os seguintes mercados (se presentes):
-                - Over 1.5 golos
-                - Over 2.5 golos
-                - Under 2.5 golos
-                - BTTS / Ambas Marcam (Sim)
-                - Cantos Over 8.5 / 9.5 (ou o valor de cantos visível)
-                Devolve o resultado estritamente em formato JSON com chaves em minúsculas e valores numéricos em float (ex: {"over_15": 1.30, "over_25": 1.85, "btts_sim": 1.75, "cantos_over": 1.90}). Se algum mercado não estiver visível, omite-o.
-                """
-
-        # Chamada limpa usando o SDK oficial
-        resposta = client.models.generate_content(
-            model="gemini-1.5-flash", contents=[prompt_extracao, imagem]
-        )
-
-        texto_resposta = resposta.text
-        texto_limpo = (
-            texto_resposta.replace("```json", "")
-            .replace("```", "")
-            .strip()
-        )
-        dados_lidos = json.loads(texto_limpo)
-        odds_extraidas.update(dados_lidos)
-
-      st.sidebar.success("✅ Odds extraídas com sucesso via IA!")
-      st.sidebar.json(odds_extraidas)
-
-    except Exception as e:
-      st.sidebar.error(
-          f"❌ Erro ao processar com a IA (Verifica se a chave API está"
-          f" correta): {e}"
-      )
+odd_btts = st.sidebar.number_input(
+    "Odd Ambas Marcam (BTTS)", min_value=1.01, value=1.80, step=0.01
+)
+odd_cantos = st.sidebar.number_input(
+    "Odd Cantos Over 8.5", min_value=1.01, value=1.85, step=0.01
+)
 
 # 3. Corpo Principal - Análise de Jogos
 teams_available = LEAGUES_CONFIG[selected_league]["teams"]
@@ -585,34 +520,34 @@ else:
   st.markdown("---")
   st.subheader("💡 Sugestões de Valor & Critério de Kelly")
 
-  # Tabela Unificada de Mercados (Golos + Cantos) com suporte a leitura por IA
+  # Tabela Unificada de Mercados (Golos + Cantos) com as odds manuais
   mercados_analise = [
       {
           "Mercado": "Over 1.5 Golos",
           "Prob_Calc": prob_over_15,
-          "Odd_Extraida": odds_extraidas.get("over_15", 1.35),
+          "Odd_Manual": odd_over_15,
       },
       {
           "Mercado": "Over 2.5 Golos",
           "Prob_Calc": prob_over_25,
-          "Odd_Extraida": odds_extraidas.get("over_25", 1.95),
+          "Odd_Manual": odd_over_25,
       },
       {
           "Mercado": "Ambas Marcam (BTTS)",
           "Prob_Calc": prob_btts,
-          "Odd_Extraida": odds_extraidas.get("btts_sim", 1.80),
+          "Odd_Manual": odd_btts,
       },
       {
           "Mercado": "Cantos Over 8.5",
           "Prob_Calc": prob_cantos_over_85,
-          "Odd_Extraida": odds_extraidas.get("cantos_over", 1.85),
+          "Odd_Manual": odd_cantos,
       },
   ]
 
   dados_tabela = []
   for item in mercados_analise:
     prob = item["Prob_Calc"]
-    odd = item["Odd_Extraida"]
+    odd = item["Odd_Manual"]
     fair_odd = 1 / prob if prob > 0 else 99.0
     edge = (prob * odd) - 1  # Vantagem matemática
 
@@ -627,8 +562,8 @@ else:
 
     dados_tabela.append({
         "Mercado": item["Mercado"],
-        "Probabilidade IA/Poisson": f"{prob*100:.1f}%",
-        "Odd Disponível": f"{odd:.2f}",
+        "Probabilidade Poisson": f"{prob*100:.1f}%",
+        "Odd Inserida": f"{odd:.2f}",
         "Odd Justa": f"{fair_odd:.2f}",
         "Edge (%)": f"{edge*100:+.1f}%",
         "Stake Recomendada (€)": f"€{stake_recomendada:.2f}",
@@ -637,3 +572,4 @@ else:
 
   df_resumo = pd.DataFrame(dados_tabela)
   st.dataframe(df_resumo, use_container_width=True)
+    
