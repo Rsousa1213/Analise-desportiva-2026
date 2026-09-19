@@ -5,15 +5,45 @@ import pandas as pd
 from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
+import easyocr
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(page_title="Análise Desportiva 26/27", layout="wide")
 
 
+@st.cache_resource
+def carregar_leitor_ocr():
+    # Inicializa o leitor de OCR para Português/Inglês
+    return easyocr.Reader(['pt', 'en'], gpu=False)
+
+
+def extrair_odds_de_imagem(imagem_pil):
+    """
+    Lê a imagem carregada e procura por valores numéricos que representem odds.
+    """
+    reader = carregar_leitor_ocr()
+    imagem_bytes = io.BytesIO()
+    imagem_pil.save(imagem_bytes, format="PNG")
+    resultados = reader.readtext(imagem_bytes.getvalue(), detail=0)
+
+    odds_encontradas = []
+    # Expressão regular para capturar números decimais típicos de odds (ex: 1.50, 2,35, 12.0)
+    padrao_odd = re.compile(r"\b\d{1,2}[\.,]\d{2}\b")
+
+    for texto in resultados:
+        matches = padrao_odd.findall(texto)
+        for match in matches:
+            val = float(match.replace(",", "."))
+            if 1.01 <= val <= 50.0:
+                odds_encontradas.append(val)
+
+    return odds_encontradas
+
+
 def aplicar_estilo_visual():
-  url_imagem = "https://raw.githubusercontent.com/Rsousa1213/Analise-desportiva-2026/main/fundo_estadio.jpg"
-  st.markdown(
-      f"""
+    url_imagem = "https://raw.githubusercontent.com/Rsousa1213/Analise-desportiva-2026/main/fundo_estadio.jpg"
+    st.markdown(
+        f"""
         <style>
         .stApp {{
             background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.85)), url('{url_imagem}') !important;
@@ -43,8 +73,8 @@ def aplicar_estilo_visual():
         }}
         </style>
         """,
-      unsafe_allow_html=True,
-  )
+        unsafe_allow_html=True,
+    )
 
 
 aplicar_estilo_visual()
@@ -364,37 +394,41 @@ LEAGUES_CONFIG = {
 
 @st.cache_data(ttl=3600)
 def carregar_dados_reais(liga_nome, team_list):
-  config = LEAGUES_CONFIG.get(liga_nome, {})
-  csv_url = config.get("csv_url", "")
-  df = None
-  if csv_url:
-    try:
-      df_raw = pd.read_csv(csv_url)
-      if {"HomeTeam", "AwayTeam", "FTHG", "FTAG"}.issubset(df_raw.columns):
-        df = df_raw.dropna(subset=["HomeTeam", "AwayTeam", "FTHG", "FTAG"]).copy()
-        if "HC" not in df.columns:
-          df["HC"] = 5
-        if "AC" not in df.columns:
-          df["AC"] = 4
-    except Exception:
-      df = None
+    config = LEAGUES_CONFIG.get(liga_nome, {})
+    csv_url = config.get("csv_url", "")
+    df = None
+    if csv_url:
+        try:
+            df_raw = pd.read_csv(csv_url)
+            if {"HomeTeam", "AwayTeam", "FTHG", "FTAG"}.issubset(
+                df_raw.columns
+            ):
+                df = df_raw.dropna(
+                    subset=["HomeTeam", "AwayTeam", "FTHG", "FTAG"]
+                ).copy()
+                if "HC" not in df.columns:
+                    df["HC"] = 5
+                if "AC" not in df.columns:
+                    df["AC"] = 4
+        except Exception:
+            df = None
 
-  if df is None or df.empty:
-    records = []
-    np.random.seed(42)
-    for i in range(len(team_list)):
-      for j in range(len(team_list)):
-        if i != j:
-          records.append({
-              "HomeTeam": team_list[i],
-              "AwayTeam": team_list[j],
-              "FTHG": np.random.poisson(1.5),
-              "FTAG": np.random.poisson(1.1),
-              "HC": np.random.randint(3, 9),
-              "AC": np.random.randint(2, 7),
-          })
-    df = pd.DataFrame(records)
-  return df
+    if df is None or df.empty:
+        records = []
+        np.random.seed(42)
+        for i in range(len(team_list)):
+            for j in range(len(team_list)):
+                if i != j:
+                    records.append({
+                        "HomeTeam": team_list[i],
+                        "AwayTeam": team_list[j],
+                        "FTHG": np.random.poisson(1.5),
+                        "FTAG": np.random.poisson(1.1),
+                        "HC": np.random.randint(3, 9),
+                        "AC": np.random.randint(2, 7),
+                    })
+        df = pd.DataFrame(records)
+    return df
 
 
 selected_league = st.sidebar.selectbox(
@@ -411,260 +445,330 @@ stake_pct_max = st.sidebar.slider(
 )
 
 if selected_league:
-  teams_list = LEAGUES_CONFIG[selected_league]["teams"]
-  df = carregar_dados_reais(selected_league, teams_list)
+    teams_list = LEAGUES_CONFIG[selected_league]["teams"]
+    df = carregar_dados_reais(selected_league, teams_list)
 
-  if df is not None and not df.empty:
-    col_h, col_a = st.columns(2)
-    with col_h:
-      home_team = st.selectbox("Equipa da Casa", teams_list, index=0)
-    with col_a:
-      away_options = [t for t in teams_list if t != home_team]
-      away_team = st.selectbox(
-          "Equipa Visitante", away_options, index=0 if away_options else 0
-      )
+    if df is not None and not df.empty:
+        col_h, col_a = st.columns(2)
+        with col_h:
+            home_team = st.selectbox("Equipa da Casa", teams_list, index=0)
+        with col_a:
+            away_options = [t for t in teams_list if t != home_team]
+            away_team = st.selectbox(
+                "Equipa Visitante", away_options, index=0 if away_options else 0
+            )
 
-    home_games_all = df[df["HomeTeam"] == home_team]
-    away_games_all = df[df["AwayTeam"] == away_team]
-    home_games = (
-        home_games_all.tail(5) if len(home_games_all) >= 5 else home_games_all
-    )
-    away_games = (
-        away_games_all.tail(5) if len(away_games_all) >= 5 else away_games_all
-    )
-
-    if not home_games.empty and not away_games.empty:
-      avg_home_goals_for = home_games["FTHG"].mean()
-      avg_home_goals_against = home_games["FTAG"].mean()
-      avg_away_goals_for = away_games["FTAG"].mean()
-      avg_away_goals_against = home_games["FTHG"].mean()
-
-      league_avg_home = df["FTHG"].mean()
-      league_avg_away = df["FTAG"].mean()
-
-      lambda_home = (
-          avg_home_goals_for / league_avg_home if league_avg_home else 1
-      ) * (
-          avg_home_goals_against / league_avg_home if league_avg_home else 1
-      ) * league_avg_home
-      lambda_away = (
-          avg_away_goals_for / league_avg_away if league_avg_away else 1
-      ) * (
-          avg_away_goals_against / league_avg_away if league_avg_away else 1
-      ) * league_avg_away
-
-      max_g = 8
-      prob_matrix = np.zeros((max_g, max_g))
-      for i in range(max_g):
-        for j in range(max_g):
-          prob_matrix[i, j] = poisson.pmf(i, lambda_home) * poisson.pmf(
-              j, lambda_away
-          )
-
-      prob_over_1_5 = (
-          1 - (prob_matrix[0, 0] + prob_matrix[1, 0] + prob_matrix[0, 1])
-      ) * 100
-      odd_over_1_5 = 100 / prob_over_1_5 if prob_over_1_5 > 0 else 0
-
-      prob_under_2_5 = sum(
-          prob_matrix[i, j] for i in range(max_g) for j in range(max_g) if (i + j) <= 2
-      )
-      prob_over_2_5 = (1 - prob_under_2_5) * 100
-      odd_over_2_5 = 100 / prob_over_2_5 if prob_over_2_5 > 0 else 0
-
-      prob_under_5_5 = sum(
-          prob_matrix[i, j] for i in range(max_g) for j in range(max_g) if (i + j) <= 5
-      )
-      odd_under_5_5 = (
-          100 / (prob_under_5_5 * 100) if prob_under_5_5 > 0 else 0
-      )
-
-      prob_btts_sim = (
-          sum(
-              prob_matrix[i, j]
-              for i in range(1, max_g)
-              for j in range(1, max_g)
-          )
-          * 100
-      )
-      odd_btts = 100 / prob_btts_sim if prob_btts_sim > 0 else 0
-
-      home_corners = home_games["HC"].mean() + home_games["AC"].mean()
-      away_corners = away_games["HC"].mean() + away_games["AC"].mean()
-      avg_total_corners = (home_corners + away_corners) / 2
-      lambda_corners = avg_total_corners
-
-      prob_over_7_5_corners = (
-          1 - sum(poisson.pmf(k, lambda_corners) for k in range(8))
-      ) * 100
-      odd_over_7_5_corners = (
-          100 / prob_over_7_5_corners if prob_over_7_5_corners > 0 else 0
-      )
-
-      prob_under_14_5_corners = (
-          sum(poisson.pmf(k, lambda_corners) for k in range(15)) * 100
-      )
-      odd_under_14_5_corners = (
-          100 / prob_under_14_5_corners if prob_under_14_5_corners > 0 else 0
-      )
-
-      defval_o15 = float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0))
-      defval_o25 = float(np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0))
-      defval_u55 = float(np.clip(round(odd_under_5_5 + 0.1, 2), 1.01, 50.0))
-      defval_btts = float(np.clip(round(odd_btts + 0.1, 2), 1.01, 50.0))
-      defval_c75 = float(
-          np.clip(round(odd_over_7_5_corners + 0.1, 2), 1.01, 50.0)
-      )
-      defval_u145 = float(
-          np.clip(round(odd_under_14_5_corners + 0.1, 2), 1.01, 50.0)
-      )
-
-      st.markdown("---")
-      st.subheader("📸 Captura Rápida de Odds (Upload de Print)")
-      uploaded_file = st.file_uploader(
-          "Carregar Screenshot das Odds (.png, .jpg)",
-          type=["png", "jpg", "jpeg"],
-      )
-
-      if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Print Carregado", width=400)
-        st.success("📸 Print carregado com sucesso!")
-
-      st.markdown("---")
-      st.subheader("🎯 Comparador de Value Bets & Stake Ótima (Kelly)")
-
-      bc1, bc2, bc3, bc4, bc5, bc6 = st.columns(6)
-      with bc1:
-        bookie_odd_o15 = st.number_input(
-            "Odd (Over 1.5)", 1.01, 50.0, defval_o15, 0.01
+        home_games_all = df[df["HomeTeam"] == home_team]
+        away_games_all = df[df["AwayTeam"] == away_team]
+        home_games = (
+            home_games_all.tail(5)
+            if len(home_games_all) >= 5
+            else home_games_all
         )
-      with bc2:
-        bookie_odd_o25 = st.number_input(
-            "Odd (Over 2.5)", 1.01, 50.0, defval_o25, 0.01
-        )
-      with bc3:
-        bookie_odd_u55 = st.number_input(
-            "Odd (Under 5.5)", 1.01, 50.0, defval_u55, 0.01
-        )
-      with bc4:
-        bookie_odd_btts = st.number_input(
-            "Odd (BTTS)", 1.01, 50.0, defval_btts, 0.01
-        )
-      with bc5:
-        bookie_odd_c75 = st.number_input(
-            "Odd (Cantos 7.5)", 1.01, 50.0, defval_c75, 0.01
-        )
-      with bc6:
-        bookie_odd_u145 = st.number_input(
-            "Odd (Cantos 14.5)", 1.01, 50.0, defval_u145, 0.01
+        away_games = (
+            away_games_all.tail(5)
+            if len(away_games_all) >= 5
+            else away_games_all
         )
 
-      edge_o15 = ((prob_over_1_5 / 100) * bookie_odd_o15 - 1) * 100
-      edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
-      edge_u55 = ((prob_under_5_5) * bookie_odd_u55 - 1) * 100
-      edge_btts = ((prob_btts_sim / 100) * bookie_odd_btts - 1) * 100
-      edge_c75 = ((prob_over_7_5_corners / 100) * bookie_odd_c75 - 1) * 100
-      edge_u145 = ((prob_under_14_5_corners / 100) * bookie_odd_u145 - 1) * 100
+        if not home_games.empty and not away_games.empty:
+            avg_home_goals_for = home_games["FTHG"].mean()
+            avg_home_goals_against = home_games["FTAG"].mean()
+            avg_away_goals_for = away_games["FTAG"].mean()
+            avg_away_goals_against = home_games["FTHG"].mean()
 
+            league_avg_home = df["FTHG"].mean()
+            league_avg_away = df["FTAG"].mean()
 
-      def calcular_stake_kelly(prob_pct, odd, banca, max_pct):
-        p = prob_pct / 100.0
-        if (odd - 1) <= 0:
-          return 0.0
-        kelly_fraction = (p * odd - 1) / (odd - 1)
-        if kelly_fraction <= 0:
-          return 0.0
-        stake_aplicada = banca * min(max_pct / 100.0, kelly_fraction * 0.5)
-        return round(stake_aplicada, 2)
+            lambda_home = (
+                (avg_home_goals_for / league_avg_home if league_avg_home else 1)
+                * (
+                    avg_home_goals_against / league_avg_home
+                    if league_avg_home
+                    else 1
+                )
+                * league_avg_home
+            )
+            lambda_away = (
+                (avg_away_goals_for / league_avg_away if league_avg_away else 1)
+                * (
+                    avg_away_goals_against / league_avg_away
+                    if league_avg_away
+                    else 1
+                )
+                * league_avg_away
+            )
 
+            max_g = 8
+            prob_matrix = np.zeros((max_g, max_g))
+            for i in range(max_g):
+                for j in range(max_g):
+                    prob_matrix[i, j] = poisson.pmf(
+                        i, lambda_home
+                    ) * poisson.pmf(j, lambda_away)
 
-      val_o15 = calcular_stake_kelly(
-          prob_over_1_5, bookie_odd_o15, banca_inicial, stake_pct_max
-      )
-      val_o25 = calcular_stake_kelly(
-          prob_over_2_5, bookie_odd_o25, banca_inicial, stake_pct_max
-      )
-      val_u55 = calcular_stake_kelly(
-          prob_under_5_5 * 100, bookie_odd_u55, banca_inicial, stake_pct_max
-      )
-      val_btts = calcular_stake_kelly(
-          prob_btts_sim, bookie_odd_btts, banca_inicial, stake_pct_max
-      )
-      val_c75 = calcular_stake_kelly(
-          prob_over_7_5_corners,
-          bookie_odd_c75,
-          banca_inicial,
-          stake_pct_max,
-      )
-      val_u145 = calcular_stake_kelly(
-          prob_under_14_5_corners,
-          bookie_odd_u145,
-          banca_inicial,
-          stake_pct_max,
-      )
+            prob_over_1_5 = (
+                1 - (prob_matrix[0, 0] + prob_matrix[1, 0] + prob_matrix[0, 1])
+            ) * 100
+            odd_over_1_5 = 100 / prob_over_1_5 if prob_over_1_5 > 0 else 0
 
-      tabela_dados = [
-          {
-              "Mercado Base": "Over 1.5 Golos",
-              "Probabilidade": f"{prob_over_1_5:.1f}%",
-              "Odd Justa (Modelo)": f"{odd_over_1_5:.2f}",
-              "Odd Casa de Apostas": f"{bookie_odd_o15:.2f}",
-              "Valor (+EV / Edge)": f"{edge_o15:+.2f}%",
-              "Aposta Dinâmica (Kelly)": f"{val_o15:.2f} €",
-              "Recomendação": "🔥 VALOR" if edge_o15 > 0 else "❌ Sem Valor",
-          },
-          {
-              "Mercado Base": "Over 2.5 Golos",
-              "Probabilidade": f"{prob_over_2_5:.1f}%",
-              "Odd Justa (Modelo)": f"{odd_over_2_5:.2f}",
-              "Odd Casa de Apostas": f"{bookie_odd_o25:.2f}",
-              "Valor (+EV / Edge)": f"{edge_o25:+.2f}%",
-              "Aposta Dinâmica (Kelly)": f"{val_o25:.2f} €",
-              "Recomendação": "🔥 VALOR" if edge_o25 > 0 else "❌ Sem Valor",
-          },
-          {
-              "Mercado Base": "Under 5.5 Golos",
-              "Probabilidade": f"{prob_under_5_5*100:.1f}%",
-              "Odd Justa (Modelo)": f"{odd_under_5_5:.2f}",
-              "Odd Casa de Apostas": f"{bookie_odd_u55:.2f}",
-              "Valor (+EV / Edge)": f"{edge_u55:+.2f}%",
-              "Aposta Dinâmica (Kelly)": f"{val_u55:.2f} €",
-              "Recomendação": "🔥 VALOR" if edge_u55 > 0 else "❌ Sem Valor",
-          },
-          {
-              "Mercado Base": "Ambas Marcam (BTTS)",
-              "Probabilidade": f"{prob_btts_sim:.1f}%",
-              "Odd Justa (Modelo)": f"{odd_btts:.2f}",
-              "Odd Casa de Apostas": f"{bookie_odd_btts:.2f}",
-              "Valor (+EV / Edge)": f"{edge_btts:+.2f}%",
-              "Aposta Dinâmica (Kelly)": f"{val_btts:.2f} €",
-              "Recomendação": "🔥 VALOR" if edge_btts > 0 else "❌ Sem Valor",
-          },
-          {
-              "Mercado Base": "Over 7.5 Cantos",
-              "Probabilidade": f"{prob_over_7_5_corners:.1f}%",
-              "Odd Justa (Modelo)": f"{odd_over_7_5_corners:.2f}",
-              "Odd Casa de Apostas": f"{bookie_odd_c75:.2f}",
-              "Valor (+EV / Edge)": f"{edge_c75:+.2f}%",
-              "Aposta Dinâmica (Kelly)": f"{val_c75:.2f} €",
-              "Recomendação": "🔥 VALOR" if edge_c75 > 0 else "❌ Sem Valor",
-          },
-          {
-              "Mercado Base": "Under 14.5 Cantos",
-              "Probabilidade": f"{prob_under_14_5_corners:.1f}%",
-              "Odd Justa (Modelo)": f"{odd_under_14_5_corners:.2f}",
-              "Odd Casa de Apostas": f"{bookie_odd_u145:.2f}",
-              "Valor (+EV / Edge)": f"{edge_u145:+.2f}%",
-              "Aposta Dinâmica (Kelly)": f"{val_u145:.2f} €",
-              "Recomendação": "🔥 VALOR" if edge_u145 > 0 else "❌ Sem Valor",
-          },
-      ]
+            prob_under_2_5 = sum(
+                prob_matrix[i, j]
+                for i in range(max_g)
+                for j in range(max_g)
+                if (i + j) <= 2
+            )
+            prob_over_2_5 = (1 - prob_under_2_5) * 100
+            odd_over_2_5 = 100 / prob_over_2_5 if prob_over_2_5 > 0 else 0
 
-      df_tabela = pd.DataFrame(tabela_dados)
-      st.dataframe(df_tabela, use_container_width=True, hide_index=True)
+            prob_under_5_5 = sum(
+                prob_matrix[i, j]
+                for i in range(max_g)
+                for j in range(max_g)
+                if (i + j) <= 5
+            )
+            odd_under_5_5 = (
+                100 / (prob_under_5_5 * 100) if prob_under_5_5 > 0 else 0
+            )
 
+            prob_btts_sim = (
+                sum(
+                    prob_matrix[i, j]
+                    for i in range(1, max_g)
+                    for j in range(1, max_g)
+                )
+                * 100
+            )
+            odd_btts = 100 / prob_btts_sim if prob_btts_sim > 0 else 0
+
+            home_corners = home_games["HC"].mean() + home_games["AC"].mean()
+            away_corners = away_games["HC"].mean() + away_games["AC"].mean()
+            avg_total_corners = (home_corners + away_corners) / 2
+            lambda_corners = avg_total_corners
+
+            prob_over_7_5_corners = (
+                1 - sum(poisson.pmf(k, lambda_corners) for k in range(8))
+            ) * 100
+            odd_over_7_5_corners = (
+                100 / prob_over_7_5_corners if prob_over_7_5_corners > 0 else 0
+            )
+
+            prob_under_14_5_corners = (
+                sum(poisson.pmf(k, lambda_corners) for k in range(15)) * 100
+            )
+            odd_under_14_5_corners = (
+                100 / prob_under_14_5_corners
+                if prob_under_14_5_corners > 0
+                else 0
+            )
+
+            defval_o15 = float(
+                np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0)
+            )
+            defval_o25 = float(
+                np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0)
+            )
+            defval_u55 = float(
+                np.clip(round(odd_under_5_5 + 0.1, 2), 1.01, 50.0)
+            )
+            defval_btts = float(np.clip(round(odd_btts + 0.1, 2), 1.01, 50.0))
+            defval_c75 = float(
+                np.clip(round(odd_over_7_5_corners + 0.1, 2), 1.01, 50.0)
+            )
+            defval_u145 = float(
+                np.clip(round(odd_under_14_5_corners + 0.1, 2), 1.01, 50.0)
+            )
+
+            st.markdown("---")
+            st.subheader("📸 Captura Rápida de Odds (Upload de Print)")
+            uploaded_file = st.file_uploader(
+                "Carregar Screenshot das Odds (.png, .jpg)",
+                type=["png", "jpg", "jpeg"],
+            )
+
+            # Leitura OCR e preenchimento de variáveis
+            if uploaded_file is not None:
+                image = Image.open(uploaded_file)
+                st.image(image, caption="Print Carregado", width=400)
+
+                with st.spinner("🔍 A ler odds da imagem via OCR..."):
+                    odds_detetadas = extrair_odds_de_imagem(image)
+
+                if odds_detetadas:
+                    st.success(
+                        f"📸 Odds detetadas na imagem: {odds_detetadas}"
+                    )
+                    # Preenche os campos sequencialmente com as odds encontradas no print
+                    if len(odds_detetadas) > 0:
+                        defval_o15 = odds_detetadas[0]
+                    if len(odds_detetadas) > 1:
+                        defval_o25 = odds_detetadas[1]
+                    if len(odds_detetadas) > 2:
+                        defval_u55 = odds_detetadas[2]
+                    if len(odds_detetadas) > 3:
+                        defval_btts = odds_detetadas[3]
+                    if len(odds_detetadas) > 4:
+                        defval_c75 = odds_detetadas[4]
+                    if len(odds_detetadas) > 5:
+                        defval_u145 = odds_detetadas[5]
+                else:
+                    st.warning(
+                        "⚠️ Nenhuma odd válida encontrada na imagem. A usar valores padrão."
+                    )
+
+            st.markdown("---")
+            st.subheader("🎯 Comparador de Value Bets & Stake Ótima (Kelly)")
+
+            bc1, bc2, bc3, bc4, bc5, bc6 = st.columns(6)
+            with bc1:
+                bookie_odd_o15 = st.number_input(
+                    "Odd (Over 1.5)", 1.01, 50.0, defval_o15, 0.01
+                )
+            with bc2:
+                bookie_odd_o25 = st.number_input(
+                    "Odd (Over 2.5)", 1.01, 50.0, defval_o25, 0.01
+                )
+            with bc3:
+                bookie_odd_u55 = st.number_input(
+                    "Odd (Under 5.5)", 1.01, 50.0, defval_u55, 0.01
+                )
+            with bc4:
+                bookie_odd_btts = st.number_input(
+                    "Odd (BTTS)", 1.01, 50.0, defval_btts, 0.01
+                )
+            with bc5:
+                bookie_odd_c75 = st.number_input(
+                    "Odd (Cantos 7.5)", 1.01, 50.0, defval_c75, 0.01
+                )
+            with bc6:
+                bookie_odd_u145 = st.number_input(
+                    "Odd (Cantos 14.5)", 1.01, 50.0, defval_u145, 0.01
+                )
+
+            edge_o15 = ((prob_over_1_5 / 100) * bookie_odd_o15 - 1) * 100
+            edge_o25 = ((prob_over_2_5 / 100) * bookie_odd_o25 - 1) * 100
+            edge_u55 = ((prob_under_5_5) * bookie_odd_u55 - 1) * 100
+            edge_btts = ((prob_btts_sim / 100) * bookie_odd_btts - 1) * 100
+            edge_c75 = (
+                (prob_over_7_5_corners / 100) * bookie_odd_c75 - 1
+            ) * 100
+            edge_u145 = (
+                (prob_under_14_5_corners / 100) * bookie_odd_u145 - 1
+            ) * 100
+
+            def calcular_stake_kelly(prob_pct, odd, banca, max_pct):
+                p = prob_pct / 100.0
+                if (odd - 1) <= 0:
+                    return 0.0
+                kelly_fraction = (p * odd - 1) / (odd - 1)
+                if kelly_fraction <= 0:
+                    return 0.0
+                stake_aplicada = banca * min(
+                    max_pct / 100.0, kelly_fraction * 0.5
+                )
+                return round(stake_aplicada, 2)
+
+            val_o15 = calcular_stake_kelly(
+                prob_over_1_5, bookie_odd_o15, banca_inicial, stake_pct_max
+            )
+            val_o25 = calcular_stake_kelly(
+                prob_over_2_5, bookie_odd_o25, banca_inicial, stake_pct_max
+            )
+            val_u55 = calcular_stake_kelly(
+                prob_under_5_5 * 100,
+                bookie_odd_u55,
+                banca_inicial,
+                stake_pct_max,
+            )
+            val_btts = calcular_stake_kelly(
+                prob_btts_sim, bookie_odd_btts, banca_inicial, stake_pct_max
+            )
+            val_c75 = calcular_stake_kelly(
+                prob_over_7_5_corners,
+                bookie_odd_c75,
+                banca_inicial,
+                stake_pct_max,
+            )
+            val_u145 = calcular_stake_kelly(
+                prob_under_14_5_corners,
+                bookie_odd_u145,
+                banca_inicial,
+                stake_pct_max,
+            )
+
+            tabela_dados = [
+                {
+                    "Mercado Base": "Over 1.5 Golos",
+                    "Probabilidade": f"{prob_over_1_5:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_over_1_5:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_o15:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_o15:+.2f}%",
+                    "Aposta Dinâmica (Kelly)": f"{val_o15:.2f} €",
+                    "Recomendação": (
+                        "🔥 VALOR" if edge_o15 > 0 else "❌ Sem Valor"
+                    ),
+                },
+                {
+                    "Mercado Base": "Over 2.5 Golos",
+                    "Probabilidade": f"{prob_over_2_5:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_over_2_5:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_o25:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_o25:+.2f}%",
+                    "Aposta Dinâmica (Kelly)": f"{val_o25:.2f} €",
+                    "Recomendação": (
+                        "🔥 VALOR" if edge_o25 > 0 else "❌ Sem Valor"
+                    ),
+                },
+                {
+                    "Mercado Base": "Under 5.5 Golos",
+                    "Probabilidade": f"{prob_under_5_5*100:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_under_5_5:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_u55:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_u55:+.2f}%",
+                    "Aposta Dinâmica (Kelly)": f"{val_u55:.2f} €",
+                    "Recomendação": (
+                        "🔥 VALOR" if edge_u55 > 0 else "❌ Sem Valor"
+                    ),
+                },
+                {
+                    "Mercado Base": "Ambas Marcam (BTTS)",
+                    "Probabilidade": f"{prob_btts_sim:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_btts:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_btts:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_btts:+.2f}%",
+                    "Aposta Dinâmica (Kelly)": f"{val_btts:.2f} €",
+                    "Recomendação": (
+                        "🔥 VALOR" if edge_btts > 0 else "❌ Sem Valor"
+                    ),
+                },
+                {
+                    "Mercado Base": "Over 7.5 Cantos",
+                    "Probabilidade": f"{prob_over_7_5_corners:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_over_7_5_corners:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_c75:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_c75:+.2f}%",
+                    "Aposta Dinâmica (Kelly)": f"{val_c75:.2f} €",
+                    "Recomendação": (
+                        "🔥 VALOR" if edge_c75 > 0 else "❌ Sem Valor"
+                    ),
+                },
+                {
+                    "Mercado Base": "Under 14.5 Cantos",
+                    "Probabilidade": f"{prob_under_14_5_corners:.1f}%",
+                    "Odd Justa (Modelo)": f"{odd_under_14_5_corners:.2f}",
+                    "Odd Casa de Apostas": f"{bookie_odd_u145:.2f}",
+                    "Valor (+EV / Edge)": f"{edge_u145:+.2f}%",
+                    "Aposta Dinâmica (Kelly)": f"{val_u145:.2f} €",
+                    "Recomendação": (
+                        "🔥 VALOR" if edge_u145 > 0 else "❌ Sem Valor"
+                    ),
+                },
+            ]
+
+            df_tabela = pd.DataFrame(tabela_dados)
+            st.dataframe(df_tabela, use_container_width=True, hide_index=True)
+
+        else:
+            st.info("ℹ️ Selecione equipas válidas para calcular as estatísticas.")
     else:
-      st.info("ℹ️ Selecione equipas válidas para calcular as estatísticas.")
-  else:
-    st.warning("⚠️ Sem dados disponíveis para esta competição.")
+        st.warning("⚠️ Sem dados disponíveis para esta competição.")
