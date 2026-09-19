@@ -1,8 +1,18 @@
+import io
 import re
 import numpy as np
 import pandas as pd
+from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
+
+# Tentar importar biblioteca de OCR se disponível
+try:
+  import pytesseract
+
+  HAS_TESSERACT = True
+except ImportError:
+  HAS_TESSERACT = False
 
 # 1. Configuração da Página
 st.set_page_config(page_title="Análise Desportiva 26/27", layout="wide")
@@ -479,7 +489,9 @@ if selected_league:
       prob_under_5_5 = sum(
           prob_matrix[i, j] for i in range(max_g) for j in range(max_g) if (i + j) <= 5
       )
-      odd_under_5_5 = 100 / (prob_under_5_5 * 100) if prob_under_5_5 > 0 else 0
+      odd_under_5_5 = (
+          100 / (prob_under_5_5 * 100) if prob_under_5_5 > 0 else 0
+      )
 
       prob_btts_sim = (
           sum(
@@ -510,88 +522,6 @@ if selected_league:
           100 / prob_under_14_5_corners if prob_under_14_5_corners > 0 else 0
       )
 
-      st.markdown("---")
-      st.subheader(
-          f"📊 Análise Estatística: {home_team} vs {away_team}"
-      )
-
-      col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-      col_m1.metric("Média Recente (Casa)", f"{lambda_home:.2f} golos")
-      col_m2.metric("Média Recente (Fora)", f"{lambda_away:.2f} golos")
-      col_m3.metric(
-          "Golos Totais Esperados", f"{(lambda_home + lambda_away):.2f}"
-      )
-      col_m4.metric("Média Cantos Esperados", f"{avg_total_corners:.1f}")
-
-      st.markdown("<br>", unsafe_allow_html=True)
-
-      tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-          "⚽ Over 1.5 Golos",
-          "⚽ Over 2.5 Golos",
-          "🛡️ Under 5.5 Golos",
-          "🤝 Ambas Marcam (BTTS)",
-          "🚩 Cantos Over 7.5",
-          "🛡️ Cantos Under 14.5",
-          "📈 Resumo de Banca",
-      ])
-
-      with tab1:
-        st.metric(
-            "Probabilidade Over 1.5 Golos",
-            f"{prob_over_1_5:.1f}%",
-            f"Odd Justa: {odd_over_1_5:.2f}",
-        )
-      with tab2:
-        st.metric(
-            "Probabilidade Over 2.5 Golos",
-            f"{prob_over_2_5:.1f}%",
-            f"Odd Justa: {odd_over_2_5:.2f}",
-        )
-      with tab3:
-        st.metric(
-            "Probabilidade Under 5.5 Golos",
-            f"{prob_under_5_5*100:.1f}%",
-            f"Odd Justa: {odd_under_5_5:.2f}",
-        )
-      with tab4:
-        st.metric(
-            "Probabilidade Ambas Marcam (BTTS)",
-            f"{prob_btts_sim:.1f}%",
-            f"Odd Justa: {odd_btts:.2f}",
-        )
-      with tab5:
-        st.metric(
-            "Probabilidade Over 7.5 Cantos",
-            f"{prob_over_7_5_corners:.1f}%",
-            f"Odd Justa: {odd_over_7_5_corners:.2f}",
-        )
-      with tab6:
-        st.metric(
-            "Probabilidade Under 14.5 Cantos",
-            f"{prob_under_14_5_corners:.1f}%",
-            f"Odd Justa: {odd_under_14_5_corners:.2f}",
-        )
-      with tab7:
-        st.write(
-            f"Banca Inicial: **{banca_inicial:.2f} €** | Stake Máxima Teto:"
-            f" **{stake_pct_max}%**"
-        )
-
-      st.markdown("---")
-      st.subheader("⚡ Importação Rápida de Odds (Copiar e Colar em Bloco)")
-      st.markdown(
-          "Copia o texto com as odds diretamente da Captains e cola-o aqui em"
-          " baixo. O sistema deteta automaticamente os números e preenche as"
-          " odds da casa de apostas!"
-      )
-
-      texto_colado = st.text_area(
-          "Cola o bloco de texto copiado da Captains:",
-          placeholder=(
-              "Exemplo: copia os mercados e odds da página e cola aqui..."
-          ),
-      )
-
       # Valores por defeito calculados pelo modelo
       defval_o15 = float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0))
       defval_o25 = float(np.clip(round(odd_over_2_5 + 0.1, 2), 1.01, 50.0))
@@ -604,28 +534,52 @@ if selected_league:
           np.clip(round(odd_under_14_5_corners + 0.1, 2), 1.01, 50.0)
       )
 
-      # Se o utilizador colou texto, tentamos extrair números decimais válidos de odds (ex: 1.45, 2.10)
-      if texto_colado:
-        numeros_encontrados = re.findall(
-            r"\b\d[.,]\d{2}\b", texto_colado.replace(",", ".")
-        )
-        numeros_encontrados = [float(n) for n in numeros_encontrados]
+      st.markdown("---")
+      st.subheader(
+          "📸 Captura Rápida de Odds (Upload de Print / Captura de Ecrã)"
+      )
+      st.markdown(
+          "Se não consegues copiar com o Ctrl+C da Captains, tira um print"
+          " rápido da zona das odds e carrega a imagem aqui em baixo:"
+      )
 
-        if len(numeros_encontrados) >= 6:
-          st.success(
-              f"✅ Foram detetadas {len(numeros_encontrados)} odds no texto"
-              " colado! Aplicado automaticamente."
-          )
-          defval_o15 = numeros_encontrados[0]
-          defval_o25 = numeros_encontrados[1]
-          defval_u55 = numeros_encontrados[2]
-          defval_btts = numeros_encontrados[3]
-          defval_c75 = numeros_encontrados[4]
-          defval_u145 = numeros_encontrados[5]
+      uploaded_file = st.file_uploader(
+          "Carregar Screenshot das Odds (.png, .jpg)",
+          type=["png", "jpg", "jpeg"],
+      )
+
+      if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(
+            image, caption="Print Carregado", width=400
+        )
+        if HAS_TESSERACT:
+          try:
+            texto_ocr = pytesseract.image_to_string(image)
+            nums_ocr = re.findall(r"\b\d[.,]\d{2}\b", texto_ocr.replace(",", "."))
+            nums_ocr = [float(n) for n in nums_ocr]
+            if len(nums_ocr) >= 6:
+              st.success(
+                  f"✅ {len(nums_ocr)} odds detetadas com sucesso a partir da"
+                  " imagem!"
+              )
+              defval_o15, defval_o25, defval_u55, defval_btts, defval_c75, defval_u145 = (
+                  nums_ocr[:6]
+              )
+            else:
+              st.warning(
+                  "⚠️ A imagem foi lida, mas não encontrou 6 odds claras. Podes"
+                  " ajustar os valores manualmente em baixo."
+              )
+          except Exception:
+            st.error(
+                "Erro ao processar a imagem via OCR. Usa os campos manuais"
+                " abaixo."
+            )
         else:
           st.info(
-              "ℹ️ Cola mais texto ou preenche manualmente nos campos abaixo se"
-              " necessário."
+              "ℹ️ O módulo Tesseract OCR não está instalado no servidor, mas"
+              " podes preencher diretamente nos seletores abaixo."
           )
 
       st.markdown("---")
