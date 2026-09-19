@@ -6,14 +6,14 @@ from PIL import Image
 from scipy.stats import poisson
 import streamlit as st
 
-# Importação da API do Gemini para leitura visual dos prints
+# Importação correta e segura da API do Gemini
 try:
     from google import genai
     from google.genai import types
+
+    GENAI_DISPONIVEL = True
 except ImportError:
-    st.error(
-        "A biblioteca 'google-genai' não está instalada. Corre `pip install google-genai` no teu terminal."
-    )
+    GENAI_DISPONIVEL = False
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(
@@ -436,71 +436,72 @@ uploaded_prints = st.sidebar.file_uploader(
     accept_multiple_files=True,
 )
 
-# Dicionário para armazenar odds extraídas automaticamente pela IA
 odds_extraidas = {}
 
 if uploaded_prints:
-    st.sidebar.info(
-        "🤖 A analisar os prints com Inteligência Artificial..."
-    )
-    try:
-        # Inicializa o cliente do Gemini (procura automaticamente pela variável de ambiente GEMINI_API_KEY)
-        client = genai.Client()
-
-        for print_file in uploaded_prints:
-            imagem = Image.open(print_file)
-            st.sidebar.image(
-                imagem, caption=f"Print: {print_file.name}", use_container_width=True
-            )
-
-            # Prepara a imagem para envio à API do Gemini
-            buffered = BytesIO()
-            imagem.save(buffered, format="JPEG")
-            img_bytes = buffered.getvalue()
-
-            prompt_extracao = """
-            Analisa esta imagem de uma casa de apostas desportivas. 
-            Identifica e extrai os valores numéricos das odds para os seguintes mercados (se presentes):
-            - Over 1.5 (Mais de 1.5 golos)
-            - Over 2.5 (Mais de 2.5 golos)
-            - Under 5.5 (Menos de 5.5 golos)
-            - BTTS / Ambas Marcam (Sim)
-            - Over 7.5 Cantos
-            - Under 14.5 Cantos
-
-            Retorna APENAS um objeto JSON válido (sem markdown extra, sem texto adicional) com chaves em minúsculas:
-            {"over_15": 0.0, "over_25": 0.0, "under_55": 0.0, "btts": 0.0, "cantos_75": 0.0, "cantos_145": 0.0}
-            Se alguma odd não estiver visível na imagem, coloca o valor 0.0 para essa chave.
-            """
-
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=[
-                    types.Part.from_bytes(
-                        data=img_bytes, mime_type="image/jpeg"
-                    ),
-                    prompt_extracao,
-                ],
-            )
-
-            # Tenta limpar e converter a resposta da IA em dicionário JSON
-            texto_resp = response.text.strip()
-            if texto_resp.startswith("```json"):
-                texto_resp = texto_resp[7:-3].strip()
-            elif texto_resp.startswith("```"):
-                texto_resp = texto_resp[3:-3].strip()
-
-            dados_json = json.loads(texto_resp)
-            for k, v in dados_json.items():
-                if isinstance(v, (int, float)) and v > 1.0:
-                    odds_extraidas[k] = float(v)
-
-        if odds_extraidas:
-            st.sidebar.success("✨ Odds lidas e aplicadas automaticamente!")
-    except Exception as e:
-        st.sidebar.warning(
-            f"⚠️ Não foi possível extrair automaticamente via IA (verifica a chave API do Gemini). Erro: {e}"
+    if not GENAI_DISPONIVEL:
+        st.sidebar.error(
+            "⚠️ A biblioteca `google-genai` não está instalada no ambiente. Executa `pip install google-genai` no terminal."
         )
+    else:
+        st.sidebar.info("🤖 A analisar os prints com Inteligência Artificial...")
+        try:
+            client = genai.Client()
+
+            for print_file in uploaded_prints:
+                imagem = Image.open(print_file)
+                st.sidebar.image(
+                    imagem,
+                    caption=f"Print: {print_file.name}",
+                    use_container_width=True,
+                )
+
+                buffered = BytesIO()
+                imagem.save(buffered, format="JPEG")
+                img_bytes = buffered.getvalue()
+
+                prompt_extracao = """
+                Analisa esta imagem de uma casa de apostas desportivas. 
+                Identifica e extrai os valores numéricos das odds para os seguintes mercados (se presentes):
+                - Over 1.5 (Mais de 1.5 golos)
+                - Over 2.5 (Mais de 2.5 golos)
+                - Under 5.5 (Menos de 5.5 golos)
+                - BTTS / Ambas Marcam (Sim)
+                - Over 7.5 Cantos
+                - Under 14.5 Cantos
+
+                Retorna APENAS um objeto JSON válido (sem markdown extra, sem texto adicional) com chaves em minúsculas:
+                {"over_15": 0.0, "over_25": 0.0, "under_55": 0.0, "btts": 0.0, "cantos_75": 0.0, "cantos_145": 0.0}
+                Se alguma odd não estiver visível na imagem, coloca o valor 0.0 para essa chave.
+                """
+
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=[
+                        types.Part.from_bytes(
+                            data=img_bytes, mime_type="image/jpeg"
+                        ),
+                        prompt_extracao,
+                    ],
+                )
+
+                texto_resp = response.text.strip()
+                if texto_resp.startswith("```json"):
+                    texto_resp = texto_resp[7:-3].strip()
+                elif texto_resp.startswith("```"):
+                    texto_resp = texto_resp[3:-3].strip()
+
+                dados_json = json.loads(texto_resp)
+                for k, v in dados_json.items():
+                    if isinstance(v, (int, float)) and v > 1.0:
+                        odds_extraidas[k] = float(v)
+
+            if odds_extraidas:
+                st.sidebar.success("✨ Odds lidas e aplicadas automaticamente!")
+        except Exception as e:
+            st.sidebar.warning(
+                f"⚠️ Erro ao processar com a IA do Gemini. Confere se a chave API está configurada. Detalhe: {e}"
+            )
 
 if selected_league:
     teams_list = LEAGUES_CONFIG[selected_league]["teams"]
@@ -620,7 +621,6 @@ if selected_league:
                 else 0
             )
 
-            # Valores padrão baseados no modelo (caso a IA não encontre ou não haja prints)
             defval_o15 = odds_extraidas.get(
                 "over_15",
                 float(np.clip(round(odd_over_1_5 + 0.1, 2), 1.01, 50.0)),
