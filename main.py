@@ -17,9 +17,9 @@ def carregar_leitor_ocr():
 
 
 def extrair_odds_inteligente(imagem_pil):
-    """
-    Lê a imagem agrupando por linhas visuais (coordenada Y) e mapeia
-    com precisão cirúrgica os mercados Over/Under da casa de apostas.
+    """Lê a imagem agrupando por linhas visuais e ordenando da esquerda para a direita
+
+    para mapear corretamente as odds de 'Acima' (esquerda) e 'Menos' (direita).
     """
     reader = carregar_leitor_ocr()
     imagem_bytes = io.BytesIO()
@@ -45,14 +45,14 @@ def extrair_odds_inteligente(imagem_pil):
         "u145": None,
     }
 
-    # Agrupar elementos por linhas verticais aproximadas (~18 pixels)
+    # Agrupar elementos por linhas verticais (tolerância de ~20 pixels)
     linhas = []
     items_ordenados = sorted(items, key=lambda k: k["y"])
 
     for item in items_ordenados:
         colocado = False
         for linha in linhas:
-            if abs(linha["y_medio"] - item["y"]) < 18:
+            if abs(linha["y_medio"] - item["y"]) < 20:
                 linha["elementos"].append(item)
                 linha["y_medio"] = sum(e["y"] for e in linha["elementos"]) / len(
                     linha["elementos"]
@@ -80,37 +80,29 @@ def extrair_odds_inteligente(imagem_pil):
                 except:
                     pass
 
-        # Mapeamento exato baseado no texto da linha da casa de apostas
         if "1.5" in texto_linha or "1,5" in texto_linha:
             for x_pos, val in odds_na_linha:
-                if x_pos < 300:  # Acima 1.5 (Esquerda)
+                if x_pos < 350:
                     odds_mapeadas["o15"] = val
-                else:  # Menos de 1.5 (Direita)
-                    pass
-
         elif "2.5" in texto_linha or "2,5" in texto_linha:
             for x_pos, val in odds_na_linha:
-                if x_pos < 300:  # Acima 2.5 (Esquerda)
+                if x_pos < 350:
                     odds_mapeadas["o25"] = val
-
-        elif "5" in texto_linha or "5.5" in texto_linha or "5,5" in texto_linha:
+        elif (
+            "5" in texto_linha or "5.5" in texto_linha or "5,5" in texto_linha
+        ) and odds_na_linha:
             for x_pos, val in odds_na_linha:
-                if x_pos >= 300:  # Menos de 5 / 5.5 (Direita)
+                if x_pos >= 350:
                     odds_mapeadas["u55"] = val
-                elif odds_mapeadas["u55"] is None:
-                    odds_mapeadas["u55"] = val
+            if odds_mapeadas["u55"] is None and len(odds_na_linha) > 0:
+                odds_mapeadas["u55"] = odds_na_linha[-1][1]
 
-        elif "btts" in texto_linha or "ambas" in texto_linha or "marcam" in texto_linha:
-            if odds_na_linha:
-                odds_mapeadas["btts"] = odds_na_linha[0][1]
-
-        elif "cantos" in texto_linha or "canto" in texto_linha:
-            if "7.5" in texto_linha or "7,5" in texto_linha:
-                if odds_na_linha:
-                    odds_mapeadas["c75"] = odds_na_linha[0][1]
-            elif "14.5" in texto_linha or "14,5" in texto_linha:
-                if odds_na_linha:
-                    odds_mapeadas["u145"] = odds_na_linha[0][1]
+    # Fallback caso o texto exato não seja apanhado, mas haja odds na imagem
+    if len(all_raw_odds) >= 4:
+        if odds_mapeadas["o15"] is None and len(all_raw_odds) > 2:
+            odds_mapeadas["o15"] = all_raw_odds[2]
+        if odds_mapeadas["o25"] is None and len(all_raw_odds) > 6:
+            odds_mapeadas["o25"] = all_raw_odds[6]
 
     return odds_mapeadas, all_raw_odds
 
