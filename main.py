@@ -513,7 +513,7 @@ else:
       else 2.0
   )
   media_ay = (
-      np.average(df_away_all["AY"], weights=df_away_all["Peso_Temporal"])
+      np.average(df_away_all["AY"], weights=df_home_all["Peso_Temporal"])
       if not df_away_all.empty
       else 2.1
   )
@@ -556,45 +556,43 @@ else:
   m7.metric("Cartões Totais (Esp.)", f"{lambda_total_cartoes:.1f}")
 
   st.markdown("---")
-  st.subheader(
-      "💡 Tabela Consolidada de Mercados (Com Opção de Aposta Múltipla)"
-  )
+  st.subheader("💡 Tabela Consolidada de Mercados")
+
+  # Dicionário de referência para os mercados e respetivos dados calculados
+  dicionario_mercados = {
+      "Over 1.5 Golos": {"prob": prob_over_15, "odd": odd_over_15},
+      "Over 2.5 Golos": {"prob": prob_over_25, "odd": odd_over_25},
+      "Ambas Marcam (BTTS)": {"prob": prob_btts, "odd": odd_btts},
+      "Cantos Over 7.5": {
+          "prob": prob_cantos_over_75,
+          "odd": odd_cantos_over_75,
+      },
+      "Cartões Over 4.5": {
+          "prob": prob_cartoes_over_45,
+          "odd": odd_cartoes_over_45,
+      },
+      "Over 0.5 1ª Parte": {"prob": prob_over_05_1p, "odd": odd_over_05_1p},
+  }
 
   mercados_analise = [
-      {
-          "Mercado": "Over 1.5 Golos",
-          "Prob_Calc": prob_over_15,
-          "Odd_Manual": odd_over_15,
-      },
-      {
-          "Mercado": "Over 2.5 Golos",
-          "Prob_Calc": prob_over_25,
-          "Odd_Manual": odd_over_25,
-      },
-      {
-          "Mercado": "Ambas Marcam (BTTS)",
-          "Prob_Calc": prob_btts,
-          "Odd_Manual": odd_btts,
-      },
-      {
-          "Mercado": "Cantos Over 7.5",
-          "Prob_Calc": prob_cantos_over_75,
-          "Odd_Manual": odd_cantos_over_75,
-      },
-      {
-          "Mercado": "Cartões Over 4.5",
-          "Prob_Calc": prob_cartoes_over_45,
-          "Odd_Manual": odd_cartoes_over_45,
-      },
-      {
-          "Mercado": "Over 0.5 1ª Parte",
-          "Prob_Calc": prob_over_05_1p,
-          "Odd_Manual": odd_over_05_1p,
-      },
+      {"Mercado": "Over 1.5 Golos", "Prob_Calc": prob_over_15, "Odd_Manual": odd_over_15},
+      {"Mercado": "Over 2.5 Golos", "Prob_Calc": prob_over_25, "Odd_Manual": odd_over_25},
+      {"Mercado": "Ambas Marcam (BTTS)", "Prob_Calc": prob_btts, "Odd_Manual": odd_btts},
+      {"Mercado": "Cantos Over 7.5", "Prob_Calc": prob_cantos_over_75, "Odd_Manual": odd_cantos_over_75},
+      {"Mercado": "Cartões Over 4.5", "Prob_Calc": prob_cartoes_over_45, "Odd_Manual": odd_cartoes_over_45},
+      {"Mercado": "Over 0.5 1ª Parte", "Prob_Calc": prob_over_05_1p, "Odd_Manual": odd_over_05_1p},
   ]
 
+  # Seletor na Barra Lateral para o Utilizador escolher quais os mercados que compõem a Múltipla do Jogo
+  st.sidebar.markdown("---")
+  st.sidebar.subheader("🔗 Criar Múltipla do Jogo")
+  mercados_selecionados_multipla = st.sidebar.multiselect(
+      "Selecionar linhas para Combinada:",
+      options=list(dicionario_mercados.keys()),
+      default=[],
+  )
+
   dados_tabela = []
-  mercados_com_valor = []
 
   for item in mercados_analise:
     prob = item["Prob_Calc"]
@@ -615,7 +613,6 @@ else:
             stake_recomendada, banca_inicial * (stake_pct_max / 100)
         )
         status = "🔥 Valor Encontrado"
-        mercados_com_valor.append({"prob": prob, "odd": odd})
       else:
         stake_recomendada = 0.0
         status = "⚖️ Neutro / Evitar"
@@ -633,15 +630,17 @@ else:
         "Avaliação": status,
     })
 
-  # Adicionar Linha Dinâmica de Múltipla se houver 2 ou mais mercados com valor no jogo
-  if len(mercados_com_valor) >= 2:
+  # Adicionar SEMPRE a Linha da Múltipla Personalizada na Tabela
+  if len(mercados_selecionados_multipla) > 0:
     prob_multipla = 1.0
     odd_multipla = 1.0
-    for m in mercados_com_valor:
-      prob_multipla *= m["prob"]
-      odd_multipla *= m["odd"]
+    for m_nome in mercados_selecionados_multipla:
+      prob_multipla *= dicionario_mercados[m_nome]["prob"]
+      odd_multipla *= dicionario_mercados[m_nome]["odd"]
 
-    fair_odd_multipla = 1 / prob_multipla if prob_multipla > 0 else 99.0
+    fair_odd_multipla = (
+        1 / prob_multipla if prob_multipla > 0 else 99.0
+    )
     edge_multipla = (prob_multipla * odd_multipla) - 1
     kelly_multipla = (
         (prob_multipla * odd_multipla - 1) / (odd_multipla - 1)
@@ -649,30 +648,55 @@ else:
         else 0
     )
 
-    if edge_multipla > 0.02 and kelly_multipla > 0:
-      stake_base_mult = banca_inicial * (
-          (stake_pct_max * 0.5) / 100
-      )  # Múltiplas usam stake mais conservadora (metade)
+    if edge_multipla > 0.02 and kelly_multipla > 0 and odd_multipla >= min_odd_permitida:
+      stake_base_mult = banca_inicial * ((stake_pct_max * 0.5) / 100)
       stake_rec_mult = stake_base_mult * prob_multipla
-      status_mult = "🚀 Múltipla de Valor (Combinada)"
+      status_mult = "🚀 Múltipla de Valor (Personalizada)"
     else:
       stake_rec_mult = 0.0
-      status_mult = "⚖️ Múltipla Neutra / Arriscada"
+      status_mult = "⚖️ Múltipla Neutra / Abaixo do Critério"
 
     ganho_rec_mult = stake_rec_mult * odd_multipla
 
-    dados_tabela.append({
-        "Mercado": (
-            f"🔗 Múltipla do Jogo ({len(mercados_com_valor)} Seleções)"
-        ),
-        "Probabilidade": f"{prob_multipla*100:.1f}%",
-        "Odd Inserida": f"{odd_multipla:.2f}",
-        "Odd Justa": f"{fair_odd_multipla:.2f}",
-        "Edge (%)": f"{edge_multipla*100:+.1f}%",
-        "Stake Recomendada (€)": f"€{stake_rec_mult:.2f}",
-        "Ganho Potencial (€)": f"€{ganho_rec_mult:.2f}",
-        "Avaliação": status_mult,
-    })
+    nome_linha_multipla = (
+        f"🔗 Múltipla Personalizada ({len(mercados_selecionados_multipla)} seleções)"
+    )
+  else:
+    prob_multipla = 0.0
+    odd_multipla = 0.0
+    fair_odd_multipla = 0.0
+    edge_multipla = 0.0
+    stake_rec_mult = 0.0
+    ganho_rec_mult = 0.0
+    status_mult = "⚠️ Nenhuma seleção escolhida na barra lateral"
+    nome_linha_multipla = "🔗 Múltipla Personalizada do Jogo (Vazia)"
+
+  dados_tabela.append({
+      "Mercado": nome_linha_multipla,
+      "Probabilidade": (
+          f"{prob_multipla*100:.1f}%"
+          if len(mercados_selecionados_multipla) > 0
+          else "-"
+      ),
+      "Odd Inserida": (
+          f"{odd_multipla:.2f}"
+          if len(mercados_selecionados_multipla) > 0
+          else "-"
+      ),
+      "Odd Justa": (
+          f"{fair_odd_multipla:.2f}"
+          if len(mercados_selecionados_multipla) > 0
+          else "-"
+      ),
+      "Edge (%)": (
+          f"{edge_multipla*100:+.1f}%"
+          if len(mercados_selecionados_multipla) > 0
+          else "-"
+      ),
+      "Stake Recomendada (€)": f"€{stake_rec_mult:.2f}",
+      "Ganho Potencial (€)": f"€{ganho_rec_mult:.2f}",
+      "Avaliação": status_mult,
+  })
 
   df_resumo = pd.DataFrame(dados_tabela)
 
