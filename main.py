@@ -1,4 +1,3 @@
-Python
 import numpy as np
 import pandas as pd
 from scipy.stats import poisson
@@ -482,7 +481,6 @@ else:
       * media_gols_geral_a,
   )
 
-  # Probabilidades de Jogo Sem Sofrer Golos (traduzido de Clean Sheet)
   cs_home_prob = (
       (df_home_all["FTAG"] == 0).mean() if not df_home_all.empty else 0.30
   )
@@ -490,7 +488,6 @@ else:
       (df_away_all["FTHG"] == 0).mean() if not df_away_all.empty else 0.20
   )
 
-  # Cantos
   media_hc_pro = (
       np.average(df_home_all["HC"], weights=df_home_all["Peso_Temporal"])
       if not df_home_all.empty
@@ -504,7 +501,6 @@ else:
   lambda_total_cantos = max(3.0, media_hc_pro) + max(2.5, media_ac_contra)
   prob_cantos_over_75 = 1 - poisson.cdf(7, lambda_total_cantos)
 
-  # Análise Disciplinar (Cartões Over 2.5)
   media_hy = (
       np.average(df_home_all["HY"], weights=df_home_all["Peso_Temporal"])
       if not df_home_all.empty
@@ -518,7 +514,6 @@ else:
   lambda_total_cartoes = media_hy + media_ay + 0.5
   prob_cartoes_over_25 = 1 - poisson.cdf(2, lambda_total_cartoes)
 
-  # Matriz Poisson Global para Golos
   max_goals = 6
   matriz_prob = np.outer(
       poisson.pmf(np.arange(max_goals + 1), lambda_home),
@@ -537,7 +532,6 @@ else:
       - matriz_prob[0, 0]
   )
 
-  # Exibição de Métricas em Painéis Visuais (Totalmente em Português)
   st.markdown("---")
   st.subheader("📊 Indicadores Avançados & Fator Casa/Fora")
 
