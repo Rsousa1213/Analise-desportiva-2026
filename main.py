@@ -578,15 +578,14 @@ else:
     else:
       kelly_fraction = (prob * odd - 1) / (odd - 1) if odd > 1 else 0
       if edge > 0.05 and kelly_fraction > 0:
-        # Fator de Confiança com base na probabilidade (escala ponderada)
-        # Ex: Probabilidades mais altas (ex: 75%+) multiplicam positivamente a stake até ao limite máximo
-        fator_confianca = prob / 0.70  # Normalizado com base num patamar de 70%
-        fator_confianca = min(max(fator_confianca, 0.5), 1.5)
-
-        stake_base = banca_inicial * (kelly_fraction / 4)
-        stake_recomendada = stake_base * fator_confianca
-
-        # Respeita estritamente o limite máximo definido na barra lateral
+        # 💡 NOVO: A stake escala de forma direta e visível com base na alta probabilidade de acerto
+        # Exemplo: Se a probabilidade for 80% (0.80), o peso de confiança é muito superior do que se for 52%
+        fator_probabilidade = prob  # Escala direta entre 0 e 1 baseada na % de acerto
+        
+        stake_base = banca_inicial * (stake_pct_max / 100)
+        stake_recomendada = stake_base * fator_probabilidade
+        
+        # Garante que não ultrapassa o teto máximo definido na barra lateral
         stake_recomendada = min(
             stake_recomendada, banca_inicial * (stake_pct_max / 100)
         )
