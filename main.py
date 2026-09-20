@@ -42,6 +42,10 @@ def aplicar_estilo_visual():
             border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.08);
         }}
+        /* Reduz o tamanho dos números das métricas */
+        div[data-testid="stMetricValue"] {{
+            font-size: 1.8rem !important;
+        }}
         </style>
         """,
       unsafe_allow_html=True,
@@ -628,7 +632,6 @@ else:
   df_resumo = pd.DataFrame(dados_tabela)
 
 
-  # Função de estilização para colorir de verde as linhas com valor encontrado
   def destacar_valor(row):
     if "🔥 Valor Encontrado" in str(row["Avaliação"]):
       return ["background-color: rgba(46, 125, 50, 0.35); color: #ffffff"] * len(
