@@ -396,8 +396,10 @@ st.sidebar.subheader("Banca & Gestão")
 banca_inicial = st.sidebar.number_input(
     "Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0
 )
+
+# Alterado de 2.0 para 5.0
 stake_pct_max = st.sidebar.slider(
-    "Stake Máxima Base (%)", min_value=0.5, max_value=5.0, value=2.0, step=0.5
+    "Stake Máxima Base (%)", min_value=0.5, max_value=5.0, value=5.0, step=0.5
 )
 
 st.sidebar.markdown("---")
@@ -501,7 +503,7 @@ else:
       else 5.0
   )
   media_ac_contra = (
-      np.average(df_away_all["AC"], weights=df_away_all["Peso_Temporal"])
+      np.average(df_away_all["AC"], weights=df_home_all["Peso_Temporal"])
       if not df_away_all.empty
       else 4.0
   )
