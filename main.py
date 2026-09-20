@@ -391,7 +391,7 @@ stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=5.0, value=2.0, step=0.5
 )
 
-# Filtro Rigoroso de Odds Mínimas (Atualizado para 1.30 por predefinição)
+# Filtro Rigoroso de Odds Mínimas (Atualizado para 1.30)
 st.sidebar.markdown("---")
 st.sidebar.subheader("Filtros de Rigor")
 min_odd_permitida = st.sidebar.number_input(
@@ -522,7 +522,6 @@ else:
   )
 
   st.markdown("---")
-  # Título alterado para "Estatisticas" conforme pedido
   st.subheader("Estatisticas")
 
   m1, m2, m3, m4 = st.columns(4)
@@ -579,7 +578,15 @@ else:
     else:
       kelly_fraction = (prob * odd - 1) / (odd - 1) if odd > 1 else 0
       if edge > 0.05 and kelly_fraction > 0:
-        stake_recomendada = max(0.0, banca_inicial * (kelly_fraction / 4))
+        # Fator de Confiança com base na probabilidade (escala ponderada)
+        # Ex: Probabilidades mais altas (ex: 75%+) multiplicam positivamente a stake até ao limite máximo
+        fator_confianca = prob / 0.70  # Normalizado com base num patamar de 70%
+        fator_confianca = min(max(fator_confianca, 0.5), 1.5)
+
+        stake_base = banca_inicial * (kelly_fraction / 4)
+        stake_recomendada = stake_base * fator_confianca
+
+        # Respeita estritamente o limite máximo definido na barra lateral
         stake_recomendada = min(
             stake_recomendada, banca_inicial * (stake_pct_max / 100)
         )
