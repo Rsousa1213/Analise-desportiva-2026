@@ -419,8 +419,8 @@ odd_cantos_over_75 = st.sidebar.number_input(
 odd_cartoes_over_45 = st.sidebar.number_input(
     "Odd Cartões Over 4.5", min_value=1.01, value=1.90, step=0.01
 )
-odd_golo_1p = st.sidebar.number_input(
-    "Odd Marcar na 1ª Parte", min_value=1.01, value=1.40, step=0.01
+odd_over_05_1p = st.sidebar.number_input(
+    "Odd Over 0.5 1ª Parte", min_value=1.01, value=1.40, step=0.01
 )
 
 # 3. Corpo Principal - Análise de Jogos
@@ -517,9 +517,9 @@ else:
   lambda_total_cartoes = media_hy + media_ay + 0.5
   prob_cartoes_over_45 = 1 - poisson.cdf(4, lambda_total_cartoes)
 
-  # Probabilidade de golo na 1ª parte (aproximadamente 45% dos golos totais ocorrem na 1ª parte)
+  # Probabilidade de Over 0.5 na 1ª parte (considerando ~45% dos golos totais no 1º tempo)
   lambda_1p = (lambda_home + lambda_away) * 0.45
-  prob_golo_1p = 1 - poisson.pmf(0, lambda_1p)
+  prob_over_05_1p = 1 - poisson.pmf(0, lambda_1p)
 
   max_goals = 6
   matriz_prob = np.outer(
@@ -583,9 +583,9 @@ else:
           "Odd_Manual": odd_cartoes_over_45,
       },
       {
-          "Mercado": "Marcar na 1ª Parte",
-          "Prob_Calc": prob_golo_1p,
-          "Odd_Manual": odd_golo_1p,
+          "Mercado": "Over 0.5 1ª Parte",
+          "Prob_Calc": prob_over_05_1p,
+          "Odd_Manual": odd_over_05_1p,
       },
   ]
 
