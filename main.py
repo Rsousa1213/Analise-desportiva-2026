@@ -612,7 +612,6 @@ else:
         stake_recomendada = 0.0
         status = "⚖️ Neutro / Evitar"
 
-    # Cálculo do Ganho Potencial (Retorno Total = Stake Recomendada * Odd Inserida)
     ganho_potencial = stake_recomendada * odd
 
     dados_tabela.append({
@@ -627,4 +626,17 @@ else:
     })
 
   df_resumo = pd.DataFrame(dados_tabela)
-  st.dataframe(df_resumo, use_container_width=True)
+
+
+  # Função de estilização para colorir de verde as linhas com valor encontrado
+  def destacar_valor(row):
+    if "🔥 Valor Encontrado" in str(row["Avaliação"]):
+      return ["background-color: rgba(46, 125, 50, 0.35); color: #ffffff"] * len(
+          row
+      )
+    return [""] * len(row)
+
+
+  df_estilizado = df_resumo.style.apply(destacar_valor, axis=1)
+
+  st.dataframe(df_estilizado, use_container_width=True)
