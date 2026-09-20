@@ -1,3 +1,4 @@
+Python
 import numpy as np
 import pandas as pd
 from scipy.stats import poisson
@@ -558,22 +559,6 @@ else:
   st.markdown("---")
   st.subheader("💡 Tabela Consolidada de Mercados")
 
-  # Dicionário de referência para os mercados e respetivos dados calculados
-  dicionario_mercados = {
-      "Over 1.5 Golos": {"prob": prob_over_15, "odd": odd_over_15},
-      "Over 2.5 Golos": {"prob": prob_over_25, "odd": odd_over_25},
-      "Ambas Marcam (BTTS)": {"prob": prob_btts, "odd": odd_btts},
-      "Cantos Over 7.5": {
-          "prob": prob_cantos_over_75,
-          "odd": odd_cantos_over_75,
-      },
-      "Cartões Over 4.5": {
-          "prob": prob_cartoes_over_45,
-          "odd": odd_cartoes_over_45,
-      },
-      "Over 0.5 1ª Parte": {"prob": prob_over_05_1p, "odd": odd_over_05_1p},
-  }
-
   mercados_analise = [
       {"Mercado": "Over 1.5 Golos", "Prob_Calc": prob_over_15, "Odd_Manual": odd_over_15},
       {"Mercado": "Over 2.5 Golos", "Prob_Calc": prob_over_25, "Odd_Manual": odd_over_25},
@@ -583,16 +568,8 @@ else:
       {"Mercado": "Over 0.5 1ª Parte", "Prob_Calc": prob_over_05_1p, "Odd_Manual": odd_over_05_1p},
   ]
 
-  # Seletor na Barra Lateral para o Utilizador escolher quais os mercados que compõem a Múltipla do Jogo
-  st.sidebar.markdown("---")
-  st.sidebar.subheader("🔗 Criar Múltipla do Jogo")
-  mercados_selecionados_multipla = st.sidebar.multiselect(
-      "Selecionar linhas para Combinada:",
-      options=list(dicionario_mercados.keys()),
-      default=[],
-  )
-
   dados_tabela = []
+  mercados_com_valor = []  # Lista para armazenar as seleções que dão "Valor Encontrado" (verde)
 
   for item in mercados_analise:
     prob = item["Prob_Calc"]
@@ -613,6 +590,13 @@ else:
             stake_recomendada, banca_inicial * (stake_pct_max / 100)
         )
         status = "🔥 Valor Encontrado"
+        
+        # Adicionar automaticamente à lista de apostas com valor (verde)
+        mercados_com_valor.append({
+            "Mercado": item["Mercado"],
+            "prob": prob,
+            "odd": odd
+        })
       else:
         stake_recomendada = 0.0
         status = "⚖️ Neutro / Evitar"
@@ -630,17 +614,15 @@ else:
         "Avaliação": status,
     })
 
-  # Adicionar SEMPRE a Linha da Múltipla Personalizada na Tabela
-  if len(mercados_selecionados_multipla) > 0:
+  # Automatizar o somatório das linhas que dão verde para a Múltipla Automática
+  if len(mercados_com_valor) > 0:
     prob_multipla = 1.0
     odd_multipla = 1.0
-    for m_nome in mercados_selecionados_multipla:
-      prob_multipla *= dicionario_mercados[m_nome]["prob"]
-      odd_multipla *= dicionario_mercados[m_nome]["odd"]
+    for m in mercados_com_valor:
+      prob_multipla *= m["prob"]
+      odd_multipla *= m["odd"]
 
-    fair_odd_multipla = (
-        1 / prob_multipla if prob_multipla > 0 else 99.0
-    )
+    fair_odd_multipla = 1 / prob_multipla if prob_multipla > 0 else 99.0
     edge_multipla = (prob_multipla * odd_multipla) - 1
     kelly_multipla = (
         (prob_multipla * odd_multipla - 1) / (odd_multipla - 1)
@@ -648,19 +630,17 @@ else:
         else 0
     )
 
-    if edge_multipla > 0.02 and kelly_multipla > 0 and odd_multipla >= min_odd_permitida:
+    if edge_multipla > 0.01 and kelly_multipla > 0:
       stake_base_mult = banca_inicial * ((stake_pct_max * 0.5) / 100)
       stake_rec_mult = stake_base_mult * prob_multipla
-      status_mult = "🚀 Múltipla de Valor (Personalizada)"
+      status_mult = f"🚀 Múltipla de Valor ({len(mercados_com_valor)} seleções em verde)"
     else:
       stake_rec_mult = 0.0
-      status_mult = "⚖️ Múltipla Neutra / Abaixo do Critério"
+      status_mult = f"⚖️ Múltipla Neutra ({len(mercados_com_valor)} seleções)"
 
     ganho_rec_mult = stake_rec_mult * odd_multipla
-
-    nome_linha_multipla = (
-        f"🔗 Múltipla Personalizada ({len(mercados_selecionados_multipla)} seleções)"
-    )
+    nomes_mercados_str = ", ".join([m["Mercado"] for m in mercados_com_valor])
+    nome_linha_multipla = f"🔗 Múltipla Automática ({nomes_mercados_str})"
   else:
     prob_multipla = 0.0
     odd_multipla = 0.0
@@ -668,30 +648,22 @@ else:
     edge_multipla = 0.0
     stake_rec_mult = 0.0
     ganho_rec_mult = 0.0
-    status_mult = "⚠️ Nenhuma seleção escolhida na barra lateral"
-    nome_linha_multipla = "🔗 Múltipla Personalizada do Jogo (Vazia)"
+    status_mult = "⚠️ Nenhuma seleção em verde no momento"
+    nome_linha_multipla = "🔗 Múltipla Automática do Jogo (Sem Seleções de Valor)"
 
   dados_tabela.append({
       "Mercado": nome_linha_multipla,
       "Probabilidade": (
-          f"{prob_multipla*100:.1f}%"
-          if len(mercados_selecionados_multipla) > 0
-          else "-"
+          f"{prob_multipla*100:.1f}%" if len(mercados_com_valor) > 0 else "-"
       ),
       "Odd Inserida": (
-          f"{odd_multipla:.2f}"
-          if len(mercados_selecionados_multipla) > 0
-          else "-"
+          f"{odd_multipla:.2f}" if len(mercados_com_valor) > 0 else "-"
       ),
       "Odd Justa": (
-          f"{fair_odd_multipla:.2f}"
-          if len(mercados_selecionados_multipla) > 0
-          else "-"
+          f"{fair_odd_multipla:.2f}" if len(mercados_com_valor) > 0 else "-"
       ),
       "Edge (%)": (
-          f"{edge_multipla*100:+.1f}%"
-          if len(mercados_selecionados_multipla) > 0
-          else "-"
+          f"{edge_multipla*100:+.1f}%" if len(mercados_com_valor) > 0 else "-"
       ),
       "Stake Recomendada (€)": f"€{stake_rec_mult:.2f}",
       "Ganho Potencial (€)": f"€{ganho_rec_mult:.2f}",
