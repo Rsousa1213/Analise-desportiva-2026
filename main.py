@@ -371,8 +371,6 @@ def carregar_dados_reais(liga_nome, team_list):
           })
     df = pd.DataFrame(records)
 
-  # Simulação de Ponderação Temporal (Decaimento Exponencial)
-  # AtRIBui pesos maiores (mais recentes) às últimas linhas do dataframe gerado/carregado
   n_rows = len(df)
   pesos = np.linspace(0.5, 1.0, n_rows)
   df["Peso_Temporal"] = pesos
@@ -385,7 +383,7 @@ selected_league = st.sidebar.selectbox(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("💰 Gestão de Banca & Critério de Kelly")
+st.sidebar.subheader("Banca")
 banca_inicial = st.sidebar.number_input(
     "Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0
 )
@@ -393,13 +391,13 @@ stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=5.0, value=2.0, step=0.5
 )
 
-# Filtro Rigoroso de Odds Mínimas
+# Filtro Rigoroso de Odds Mínimas (Atualizado para 1.30 por predefinição)
 st.sidebar.markdown("---")
-st.sidebar.subheader("🛡️ Filtros de Rigor")
+st.sidebar.subheader("Filtros de Rigor")
 min_odd_permitida = st.sidebar.number_input(
     "Odd Mínima de Segurança",
     min_value=1.01,
-    value=1.50,
+    value=1.30,
     step=0.05,
     help=(
         "Bloqueia automaticamente apostas em cotações abaixo deste valor para"
@@ -446,7 +444,6 @@ with col2:
 if home_team == away_team:
   st.warning("⚠️ Seleciona duas equipas diferentes para realizar a análise.")
 else:
-  # Cálculo de Médias Ponderadas por Fator Temporal e Condição Casa/Fora
   df_home = df_liga[df_liga["HomeTeam"] == home_team]
   df_away = df_liga[df_liga["AwayTeam"] == away_team]
 
@@ -474,7 +471,6 @@ else:
   media_gols_geral_h = df_liga["FTHG"].mean()
   media_gols_geral_a = df_liga["FTAG"].mean()
 
-  # Modelo de Poisson Ajustado com Fator Casa Dinâmico
   lambda_home = max(
       0.4,
       (media_h_gs / media_gols_geral_h)
@@ -488,7 +484,6 @@ else:
       * media_gols_geral_a,
   )
 
-  # Cantos com base ponderada
   media_hc_pro = (
       np.average(df_home["HC"], weights=df_home["Peso_Temporal"])
       if not df_home.empty
@@ -507,7 +502,6 @@ else:
   prob_cantos_over_75 = 1 - poisson.cdf(7, lambda_total_cantos)
   prob_cantos_under_145 = poisson.cdf(14, lambda_total_cantos)
 
-  # Simulação de Poisson para Golos
   max_goals = 6
   matriz_prob = np.outer(
       poisson.pmf(np.arange(max_goals + 1), lambda_home),
@@ -528,7 +522,8 @@ else:
   )
 
   st.markdown("---")
-  st.subheader("📊 Previsões Estatísticas (Poisson com Rigor Temporal)")
+  # Título alterado para "Estatisticas" conforme pedido
+  st.subheader("Estatisticas")
 
   m1, m2, m3, m4 = st.columns(4)
   m1.metric("Esperança Golos (Casa)", f"{lambda_home:.2f}")
@@ -543,7 +538,6 @@ else:
 
   st.markdown("---")
 
-  # Tabela Unificada de Mercados com Filtro de Rigor de Odds Mínimas
   mercados_analise = [
       {
           "Mercado": "Over 1.5 Golos",
@@ -579,12 +573,10 @@ else:
     fair_odd = 1 / prob if prob > 0 else 99.0
     edge = (prob * odd) - 1
 
-    # Validação do Filtro de Segurança
     if odd < min_odd_permitida:
       status = "🛡️ Bloqueado (Odd Abaixo do Mínimo)"
       stake_recomendada = 0.0
     else:
-      # Critério de Kelly Fracionado (¼ de Kelly) com exigência de Edge positivo (> 5%)
       kelly_fraction = (prob * odd - 1) / (odd - 1) if odd > 1 else 0
       if edge > 0.05 and kelly_fraction > 0:
         stake_recomendada = max(0.0, banca_inicial * (kelly_fraction / 4))
