@@ -1,3 +1,4 @@
+Python
 import numpy as np
 import pandas as pd
 from scipy.stats import poisson
@@ -348,14 +349,9 @@ def carregar_dados_reais(liga_nome, team_list):
       df_raw = pd.read_csv(csv_url)
       if {"HomeTeam", "AwayTeam", "FTHG", "FTAG"}.issubset(df_raw.columns):
         df = df_raw.dropna(subset=["HomeTeam", "AwayTeam", "FTHG", "FTAG"]).copy()
-        # Garantir métricas complementares ou simulação robustas se faltarem
         for col, default_val in [
             ("HC", 5),
             ("AC", 4),
-            ("HS", 12),
-            ("AS", 10),
-            ("HST", 5),
-            ("AST", 4),
             ("HY", 2),
             ("AY", 2),
         ]:
@@ -377,10 +373,6 @@ def carregar_dados_reais(liga_nome, team_list):
               "FTAG": np.random.poisson(1.1),
               "HC": np.random.randint(3, 9),
               "AC": np.random.randint(2, 7),
-              "HS": np.random.randint(8, 18),
-              "AS": np.random.randint(6, 15),
-              "HST": np.random.randint(3, 8),
-              "AST": np.random.randint(2, 7),
               "HY": np.random.randint(1, 4),
               "AY": np.random.randint(1, 4),
           })
@@ -425,11 +417,8 @@ odd_btts = st.sidebar.number_input(
 odd_cantos_over_75 = st.sidebar.number_input(
     "Odd Cantos Over 7.5", min_value=1.01, value=1.55, step=0.01
 )
-odd_remates_over_225 = st.sidebar.number_input(
-    "Odd Remates Totais Over 22.5", min_value=1.01, value=1.85, step=0.01
-)
-odd_cartoes_over_45 = st.sidebar.number_input(
-    "Odd Cartões Over 4.5", min_value=1.01, value=1.90, step=0.01
+odd_cartoes_over_25 = st.sidebar.number_input(
+    "Odd Cartões Over 2.5", min_value=1.01, value=1.70, step=0.01
 )
 
 # 3. Corpo Principal - Análise de Jogos
@@ -453,11 +442,9 @@ with col2:
 if home_team == away_team:
   st.warning("⚠️ Seleciona duas equipas diferentes para realizar a análise.")
 else:
-  # Filtragem avançada: Casa vs Fora isolado + Global ponderado
   df_home_all = df_liga[df_liga["HomeTeam"] == home_team]
   df_away_all = df_liga[df_liga["AwayTeam"] == away_team]
 
-  # 1. Fator Casa vs Fora Avançado (pesos específicos para jogos em casa e fora)
   media_h_gs = (
       np.average(df_home_all["FTHG"], weights=df_home_all["Peso_Temporal"])
       if not df_home_all.empty
@@ -495,28 +482,15 @@ else:
       * media_gols_geral_a,
   )
 
-  # 2. Clean Sheets & Fail to Score Probabilities
-  # Calculadas com base na proporção histórica de jogos sem sofrer / sem marcar
+  # Probabilidades de Jogo Sem Sofrer Golos (traduzido de Clean Sheet)
   cs_home_prob = (
       (df_home_all["FTAG"] == 0).mean() if not df_home_all.empty else 0.30
   )
   cs_away_prob = (
       (df_away_all["FTHG"] == 0).mean() if not df_away_all.empty else 0.20
   )
-  fts_home_prob = (
-      (df_home_all["FTHG"] == 0).mean() if not df_home_all.empty else 0.15
-  )
-  fts_away_prob = (
-      (df_away_all["FTAG"] == 0).mean() if not df_away_all.empty else 0.25
-  )
 
-  # 3. Momentos de Jogo (Estimativa estatística de golos por partes: ~40% 1ª parte, ~60% 2ª parte / golos tardios)
-  gols_esperados_total = lambda_home + lambda_away
-  prob_golo_tardio = 1 - poisson.cdf(
-      0, gols_esperados_total * 0.35
-  )  * 100  # Últimos 15 min
-
-  # 4. Cantos e Remates (Shots)
+  # Cantos
   media_hc_pro = (
       np.average(df_home_all["HC"], weights=df_home_all["Peso_Temporal"])
       if not df_home_all.empty
@@ -530,20 +504,7 @@ else:
   lambda_total_cantos = max(3.0, media_hc_pro) + max(2.5, media_ac_contra)
   prob_cantos_over_75 = 1 - poisson.cdf(7, lambda_total_cantos)
 
-  media_hs = (
-      np.average(df_home_all["HS"], weights=df_home_all["Peso_Temporal"])
-      if not df_home_all.empty
-      else 12.0
-  )
-  media_as = (
-      np.average(df_away_all["AS"], weights=df_away_all["Peso_Temporal"])
-      if not df_away_all.empty
-      else 10.0
-  )
-  lambda_total_remates = (media_hs + media_as) * 0.9
-  prob_remates_over_225 = 1 - poisson.cdf(22, lambda_total_remates)
-
-  # 5. Análise Disciplinar (Cartões)
+  # Análise Disciplinar (Cartões Over 2.5)
   media_hy = (
       np.average(df_home_all["HY"], weights=df_home_all["Peso_Temporal"])
       if not df_home_all.empty
@@ -554,8 +515,8 @@ else:
       if not df_away_all.empty
       else 2.1
   )
-  lambda_total_cartoes = media_hy + media_ay + 0.5  # Margem de pressão
-  prob_cartoes_over_45 = 1 - poisson.cdf(4, lambda_total_cartoes)
+  lambda_total_cartoes = media_hy + media_ay + 0.5
+  prob_cartoes_over_25 = 1 - poisson.cdf(2, lambda_total_cartoes)
 
   # Matriz Poisson Global para Golos
   max_goals = 6
@@ -576,7 +537,7 @@ else:
       - matriz_prob[0, 0]
   )
 
-  # Exibição de Métricas em Painéis Visuais
+  # Exibição de Métricas em Painéis Visuais (Totalmente em Português)
   st.markdown("---")
   st.subheader("📊 Indicadores Avançados & Fator Casa/Fora")
 
@@ -586,11 +547,10 @@ else:
   m3.metric("Prob. Over 2.5", f"{prob_over_25*100:.1f}%")
   m4.metric("Prob. Ambas Marcam", f"{prob_btts*100:.1f}%")
 
-  m5, m6, m7, m8 = st.columns(4)
-  m5.metric("Clean Sheet (Casa)", f"{cs_home_prob*100:.1f}%")
-  m6.metric("Clean Sheet (Fora)", f"{cs_away_prob*100:.1f}%")
-  m7.metric("Remates Totais (Esp.)", f"{lambda_total_remates:.1f}")
-  m8.metric("Cartões Totais (Esp.)", f"{lambda_total_cartoes:.1f}")
+  m5, m6, m7 = st.columns(3)
+  m5.metric("Jogo Sem Sofrer Golos (Casa)", f"{cs_home_prob*100:.1f}%")
+  m6.metric("Jogo Sem Sofrer Golos (Fora)", f"{cs_away_prob*100:.1f}%")
+  m7.metric("Cartões Totais (Esp.)", f"{lambda_total_cartoes:.1f}")
 
   st.markdown("---")
   st.subheader("💡 Tabela Consolidada de Mercados com Stake Inteligente")
@@ -617,14 +577,9 @@ else:
           "Odd_Manual": odd_cantos_over_75,
       },
       {
-          "Mercado": "Remates Over 22.5",
-          "Prob_Calc": prob_remates_over_225,
-          "Odd_Manual": odd_remates_over_225,
-      },
-      {
-          "Mercado": "Cartões Over 4.5",
-          "Prob_Calc": prob_cartoes_over_45,
-          "Odd_Manual": odd_cartoes_over_45,
+          "Mercado": "Cartões Over 2.5",
+          "Prob_Calc": prob_cartoes_over_25,
+          "Odd_Manual": odd_cartoes_over_25,
       },
   ]
 
