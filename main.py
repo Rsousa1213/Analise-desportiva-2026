@@ -517,7 +517,6 @@ else:
   lambda_total_cartoes = media_hy + media_ay + 0.5
   prob_cartoes_over_45 = 1 - poisson.cdf(4, lambda_total_cartoes)
 
-  # Probabilidade de Over 0.5 na 1ª parte (considerando ~45% dos golos totais no 1º tempo)
   lambda_1p = (lambda_home + lambda_away) * 0.45
   prob_over_05_1p = 1 - poisson.pmf(0, lambda_1p)
 
@@ -613,6 +612,9 @@ else:
         stake_recomendada = 0.0
         status = "⚖️ Neutro / Evitar"
 
+    # Cálculo do Ganho Potencial (Retorno Total = Stake Recomendada * Odd Inserida)
+    ganho_potencial = stake_recomendada * odd
+
     dados_tabela.append({
         "Mercado": item["Mercado"],
         "Probabilidade": f"{prob*100:.1f}%",
@@ -620,6 +622,7 @@ else:
         "Odd Justa": f"{fair_odd:.2f}",
         "Edge (%)": f"{edge*100:+.1f}%",
         "Stake Recomendada (€)": f"€{stake_recomendada:.2f}",
+        "Ganho Potencial (€)": f"€{ganho_potencial:.2f}",
         "Avaliação": status,
     })
 
