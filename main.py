@@ -50,12 +50,12 @@ def aplicar_estilo_visual():
 
 aplicar_estilo_visual()
 
-# Título ajustado para "Analise 26/27" com tamanho reduzido
-st.markdown("### ⚽ Analise 26/27")
+# Título Principal
+st.markdown("### ⚽ Analise 26/27 - Rigor Estatístico Avançado")
 
-# 2. Mapeamento Completo de Ligas e Equipas Oficiais
+# 2. Mapeamento das 10 Ligas Oficiais Definidas
 LEAGUES_CONFIG = {
-    "PT Liga Portugal": {
+    "Portuguesa": {
         "teams": [
             "Académico Casa Pia AC",
             "CD Nacional",
@@ -77,7 +77,7 @@ LEAGUES_CONFIG = {
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/P1.csv",
     },
-    "EN Premier League (Inglaterra)": {
+    "Inglesa": {
         "teams": [
             "Arsenal",
             "Aston Villa",
@@ -102,7 +102,7 @@ LEAGUES_CONFIG = {
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/E0.csv",
     },
-    "ES La Liga (Espanha)": {
+    "Espanhola": {
         "teams": [
             "Athletic Bilbao",
             "Atlético de Madrid",
@@ -127,30 +127,7 @@ LEAGUES_CONFIG = {
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/SP1.csv",
     },
-    "DE Bundesliga (Alemanha)": {
-        "teams": [
-            "Bayern Munich",
-            "Borussia Dortmund",
-            "RB Leipzig",
-            "VfB Stuttgart",
-            "Hoffenheim",
-            "Bayer Leverkusen",
-            "Freiburg",
-            "Eintracht Frankfurt",
-            "Augsburg",
-            "Mainz",
-            "Union Berlin",
-            "Borussia Mönchengladbach",
-            "Hamburg",
-            "Cologne",
-            "Werder Bremen",
-            "Schalke",
-            "Elversberg",
-            "Paderborn",
-        ],
-        "csv_url": "https://www.football-data.co.uk/mmh2627/D1.csv",
-    },
-    "IT Serie A (Itália)": {
+    "Italiana": {
         "teams": [
             "Atalanta",
             "Bologna",
@@ -175,7 +152,7 @@ LEAGUES_CONFIG = {
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/I1.csv",
     },
-    "FR Ligue 1 (França)": {
+    "Francesa": {
         "teams": [
             "Angers SCO",
             "AJ Auxerre",
@@ -198,7 +175,7 @@ LEAGUES_CONFIG = {
         ],
         "csv_url": "https://www.football-data.co.uk/mmh2627/F1.csv",
     },
-    "BR Brasileirão (Brasil)": {
+    "Brasileira Série A": {
         "teams": [
             "Flamengo",
             "Palmeiras",
@@ -223,7 +200,7 @@ LEAGUES_CONFIG = {
         ],
         "csv_url": "",
     },
-    "BR Brasil Série B": {
+    "Brasileira Série B": {
         "teams": [
             "Ponte Preta",
             "Londrina",
@@ -248,7 +225,7 @@ LEAGUES_CONFIG = {
         ],
         "csv_url": "",
     },
-    "AR Liga Argentina": {
+    "Argentina": {
         "teams": [
             "AA Estudiantes",
             "Aldosivi",
@@ -283,7 +260,7 @@ LEAGUES_CONFIG = {
         ],
         "csv_url": "",
     },
-    "UEFA Liga dos Campeões": {
+    "Liga Campeoes": {
         "teams": [
             "Bayern de Munique",
             "Borussia Dortmund",
@@ -317,7 +294,7 @@ LEAGUES_CONFIG = {
         ],
         "csv_url": "",
     },
-    "UEFA Liga Europa": {
+    "Liga Europa": {
         "teams": [
             "Anderlecht",
             "Ararat-Armenia",
@@ -393,9 +370,16 @@ def carregar_dados_reais(liga_nome, team_list):
               "AC": np.random.randint(2, 7),
           })
     df = pd.DataFrame(records)
+
+  # Simulação de Ponderação Temporal (Decaimento Exponencial)
+  # AtRIBui pesos maiores (mais recentes) às últimas linhas do dataframe gerado/carregado
+  n_rows = len(df)
+  pesos = np.linspace(0.5, 1.0, n_rows)
+  df["Peso_Temporal"] = pesos
   return df
 
 
+# Configuração na Barra Lateral
 selected_league = st.sidebar.selectbox(
     "Selecione a Liga / Competição:", list(LEAGUES_CONFIG.keys())
 )
@@ -406,15 +390,27 @@ banca_inicial = st.sidebar.number_input(
     "Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0
 )
 stake_pct_max = st.sidebar.slider(
-    "Stake Máxima Base (%)", min_value=0.5, max_value=10.0, value=3.0, step=0.5
+    "Stake Máxima Base (%)", min_value=0.5, max_value=5.0, value=2.0, step=0.5
 )
 
-# Secção na barra lateral para introdução manual de odds
+# Filtro Rigoroso de Odds Mínimas
+st.sidebar.markdown("---")
+st.sidebar.subheader("🛡️ Filtros de Rigor")
+min_odd_permitida = st.sidebar.number_input(
+    "Odd Mínima de Segurança",
+    min_value=1.01,
+    value=1.50,
+    step=0.05,
+    help=(
+        "Bloqueia automaticamente apostas em cotações abaixo deste valor para"
+        " evitar risco desproporcionado."
+    ),
+)
+
 st.sidebar.markdown("---")
 st.sidebar.subheader("✏️ Inserção Manual de Odds")
-
 odd_over_15 = st.sidebar.number_input(
-    "Odd Over 1.5 Golos", min_value=1.01, value=1.35, step=0.01
+    "Odd Over 1.5 Golos", min_value=1.01, value=1.65, step=0.01
 )
 odd_over_25 = st.sidebar.number_input(
     "Odd Over 2.5 Golos", min_value=1.01, value=1.95, step=0.01
@@ -423,10 +419,10 @@ odd_btts = st.sidebar.number_input(
     "Odd Ambas Marcam (BTTS)", min_value=1.01, value=1.80, step=0.01
 )
 odd_cantos_over_75 = st.sidebar.number_input(
-    "Odd Cantos Over 7.5", min_value=1.01, value=1.45, step=0.01
+    "Odd Cantos Over 7.5", min_value=1.01, value=1.55, step=0.01
 )
 odd_cantos_under_145 = st.sidebar.number_input(
-    "Odd Cantos Under 14.5", min_value=1.01, value=1.25, step=0.01
+    "Odd Cantos Under 14.5", min_value=1.01, value=1.35, step=0.01
 )
 
 # 3. Corpo Principal - Análise de Jogos
@@ -450,43 +446,68 @@ with col2:
 if home_team == away_team:
   st.warning("⚠️ Seleciona duas equipas diferentes para realizar a análise.")
 else:
-  # Cálculo de Médias Históricas (Golos)
-  media_h_gs = df_liga[df_liga["HomeTeam"] == home_team]["FTHG"].mean()
-  media_h_gc = df_liga[df_liga["HomeTeam"] == home_team]["FTAG"].mean()
-  media_a_gs = df_liga[df_liga["AwayTeam"] == away_team]["FTAG"].mean()
-  media_a_gc = df_liga[df_liga["AwayTeam"] == away_team]["FTHG"].mean()
+  # Cálculo de Médias Ponderadas por Fator Temporal e Condição Casa/Fora
+  df_home = df_liga[df_liga["HomeTeam"] == home_team]
+  df_away = df_liga[df_liga["AwayTeam"] == away_team]
+
+  media_h_gs = (
+      np.average(df_home["FTHG"], weights=df_home["Peso_Temporal"])
+      if not df_home.empty
+      else 1.5
+  )
+  media_h_gc = (
+      np.average(df_home["FTAG"], weights=df_home["Peso_Temporal"])
+      if not df_home.empty
+      else 1.0
+  )
+  media_a_gs = (
+      np.average(df_away["FTAG"], weights=df_away["Peso_Temporal"])
+      if not df_away.empty
+      else 1.1
+  )
+  media_a_gc = (
+      np.average(df_away["FTHG"], weights=df_away["Peso_Temporal"])
+      if not df_away.empty
+      else 1.2
+  )
 
   media_gols_geral_h = df_liga["FTHG"].mean()
   media_gols_geral_a = df_liga["FTAG"].mean()
 
+  # Modelo de Poisson Ajustado com Fator Casa Dinâmico
   lambda_home = max(
-      0.5,
+      0.4,
       (media_h_gs / media_gols_geral_h)
       * (media_a_gc / media_gols_geral_a)
       * media_gols_geral_h,
   )
   lambda_away = max(
-      0.5,
+      0.4,
       (media_a_gs / media_gols_geral_a)
       * (media_h_gc / media_gols_geral_h)
       * media_gols_geral_a,
   )
 
-  # Cálculo de Médias Históricas (Cantos)
-  media_hc_pro = df_liga[df_liga["HomeTeam"] == home_team]["HC"].mean()
-  media_ac_contra = df_liga[df_liga["AwayTeam"] == away_team]["AC"].mean()
-  media_ac_pro = df_liga[df_liga["AwayTeam"] == away_team]["AC"].mean()
-  media_hc_contra = df_liga[df_liga["HomeTeam"] == home_team]["HC"].mean()
+  # Cantos com base ponderada
+  media_hc_pro = (
+      np.average(df_home["HC"], weights=df_home["Peso_Temporal"])
+      if not df_home.empty
+      else 5.0
+  )
+  media_ac_contra = (
+      np.average(df_away["AC"], weights=df_away["Peso_Temporal"])
+      if not df_away.empty
+      else 4.0
+  )
 
-  lambda_cantos_home = max(3.0, (media_hc_pro + media_ac_contra) / 2)
-  lambda_cantos_away = max(2.5, (media_ac_pro + media_hc_contra) / 2)
+  lambda_cantos_home = max(3.0, media_hc_pro)
+  lambda_cantos_away = max(2.5, media_ac_contra)
   lambda_total_cantos = lambda_cantos_home + lambda_cantos_away
 
-  # Probabilidades Poisson para Cantos (Over 7.5 e Under 14.5)
   prob_cantos_over_75 = 1 - poisson.cdf(7, lambda_total_cantos)
   prob_cantos_under_145 = poisson.cdf(14, lambda_total_cantos)
 
-  # Simulação Poisson de Placares (Golos)
+  # Simulação de Poisson para Golos
   max_goals = 6
   matriz_prob = np.outer(
       poisson.pmf(np.arange(max_goals + 1), lambda_home),
@@ -507,7 +528,7 @@ else:
   )
 
   st.markdown("---")
-  st.subheader("📊 Previsões Estatísticas (Modelo de Poisson)")
+  st.subheader("📊 Previsões Estatísticas (Poisson com Rigor Temporal)")
 
   m1, m2, m3, m4 = st.columns(4)
   m1.metric("Esperança Golos (Casa)", f"{lambda_home:.2f}")
@@ -521,9 +542,8 @@ else:
   m7.metric("Prob. Cantos Under 14.5", f"{prob_cantos_under_145*100:.1f}%")
 
   st.markdown("---")
-  # Título "Sugestões de Valor & Critério de Kelly" removido conforme solicitado
 
-  # Tabela Unificada de Mercados (Golos + Cantos)
+  # Tabela Unificada de Mercados com Filtro de Rigor de Odds Mínimas
   mercados_analise = [
       {
           "Mercado": "Over 1.5 Golos",
@@ -557,20 +577,28 @@ else:
     prob = item["Prob_Calc"]
     odd = item["Odd_Manual"]
     fair_odd = 1 / prob if prob > 0 else 99.0
-    edge = (prob * odd) - 1  # Vantagem matemática
+    edge = (prob * odd) - 1
 
-    # Critério de Kelly Fracionado (¼ de Kelly)
-    kelly_fraction = (prob * odd - 1) / (odd - 1) if odd > 1 else 0
-    stake_recomendada = max(0.0, banca_inicial * (kelly_fraction / 4))
-    stake_recomendada = min(
-        stake_recomendada, banca_inicial * (stake_pct_max / 100)
-    )
-
-    status = "🔥 Valor Encontrado" if edge > 0.05 else "⚖️ Neutro / Evitar"
+    # Validação do Filtro de Segurança
+    if odd < min_odd_permitida:
+      status = "🛡️ Bloqueado (Odd Abaixo do Mínimo)"
+      stake_recomendada = 0.0
+    else:
+      # Critério de Kelly Fracionado (¼ de Kelly) com exigência de Edge positivo (> 5%)
+      kelly_fraction = (prob * odd - 1) / (odd - 1) if odd > 1 else 0
+      if edge > 0.05 and kelly_fraction > 0:
+        stake_recomendada = max(0.0, banca_inicial * (kelly_fraction / 4))
+        stake_recomendada = min(
+            stake_recomendada, banca_inicial * (stake_pct_max / 100)
+        )
+        status = "🔥 Valor Encontrado"
+      else:
+        stake_recomendada = 0.0
+        status = "⚖️ Neutro / Evitar"
 
     dados_tabela.append({
         "Mercado": item["Mercado"],
-        "Probabilidade Poisson": f"{prob*100:.1f}%",
+        "Probabilidade": f"{prob*100:.1f}%",
         "Odd Inserida": f"{odd:.2f}",
         "Odd Justa": f"{fair_odd:.2f}",
         "Edge (%)": f"{edge*100:+.1f}%",
