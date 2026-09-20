@@ -42,7 +42,6 @@ def aplicar_estilo_visual():
             border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.08);
         }}
-        /* Reduz o tamanho dos números das métricas */
         div[data-testid="stMetricValue"] {{
             font-size: 1.8rem !important;
         }}
@@ -396,8 +395,6 @@ st.sidebar.subheader("Banca & Gestão")
 banca_inicial = st.sidebar.number_input(
     "Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0
 )
-
-# Alterado de 2.0 para 5.0
 stake_pct_max = st.sidebar.slider(
     "Stake Máxima Base (%)", min_value=0.5, max_value=5.0, value=5.0, step=0.5
 )
@@ -504,7 +501,7 @@ else:
   )
   media_ac_contra = (
       np.average(df_away_all["AC"], weights=df_home_all["Peso_Temporal"])
-      if not df_away_all.empty
+      if not df_home_all.empty
       else 4.0
   )
   lambda_total_cantos = max(3.0, media_hc_pro) + max(2.5, media_ac_contra)
@@ -559,7 +556,9 @@ else:
   m7.metric("Cartões Totais (Esp.)", f"{lambda_total_cartoes:.1f}")
 
   st.markdown("---")
-  st.subheader("💡 Tabela Consolidada de Mercados com Stake Inteligente")
+  st.subheader(
+      "💡 Tabela Consolidada de Mercados (Com Opção de Aposta Múltipla)"
+  )
 
   mercados_analise = [
       {
@@ -595,6 +594,8 @@ else:
   ]
 
   dados_tabela = []
+  mercados_com_valor = []
+
   for item in mercados_analise:
     prob = item["Prob_Calc"]
     odd = item["Odd_Manual"]
@@ -614,6 +615,7 @@ else:
             stake_recomendada, banca_inicial * (stake_pct_max / 100)
         )
         status = "🔥 Valor Encontrado"
+        mercados_com_valor.append({"prob": prob, "odd": odd})
       else:
         stake_recomendada = 0.0
         status = "⚖️ Neutro / Evitar"
@@ -631,11 +633,52 @@ else:
         "Avaliação": status,
     })
 
+  # Adicionar Linha Dinâmica de Múltipla se houver 2 ou mais mercados com valor no jogo
+  if len(mercados_com_valor) >= 2:
+    prob_multipla = 1.0
+    odd_multipla = 1.0
+    for m in mercados_com_valor:
+      prob_multipla *= m["prob"]
+      odd_multipla *= m["odd"]
+
+    fair_odd_multipla = 1 / prob_multipla if prob_multipla > 0 else 99.0
+    edge_multipla = (prob_multipla * odd_multipla) - 1
+    kelly_multipla = (
+        (prob_multipla * odd_multipla - 1) / (odd_multipla - 1)
+        if odd_multipla > 1
+        else 0
+    )
+
+    if edge_multipla > 0.02 and kelly_multipla > 0:
+      stake_base_mult = banca_inicial * (
+          (stake_pct_max * 0.5) / 100
+      )  # Múltiplas usam stake mais conservadora (metade)
+      stake_rec_mult = stake_base_mult * prob_multipla
+      status_mult = "🚀 Múltipla de Valor (Combinada)"
+    else:
+      stake_rec_mult = 0.0
+      status_mult = "⚖️ Múltipla Neutra / Arriscada"
+
+    ganho_rec_mult = stake_rec_mult * odd_multipla
+
+    dados_tabela.append({
+        "Mercado": (
+            f"🔗 Múltipla do Jogo ({len(mercados_com_valor)} Seleções)"
+        ),
+        "Probabilidade": f"{prob_multipla*100:.1f}%",
+        "Odd Inserida": f"{odd_multipla:.2f}",
+        "Odd Justa": f"{fair_odd_multipla:.2f}",
+        "Edge (%)": f"{edge_multipla*100:+.1f}%",
+        "Stake Recomendada (€)": f"€{stake_rec_mult:.2f}",
+        "Ganho Potencial (€)": f"€{ganho_rec_mult:.2f}",
+        "Avaliação": status_mult,
+    })
+
   df_resumo = pd.DataFrame(dados_tabela)
 
 
   def destacar_valor(row):
-    if "🔥 Valor Encontrado" in str(row["Avaliação"]):
+    if "🔥 Valor Encontrado" in str(row["Avaliação"]) or "🚀 Múltipla de Valor" in str(row["Avaliação"]):
       return ["background-color: rgba(46, 125, 50, 0.35); color: #ffffff"] * len(
           row
       )
