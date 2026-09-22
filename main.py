@@ -15,7 +15,8 @@ st.set_page_config(
 
 
 def aplicar_estilo_visual():
-    url_imagem = "https://raw.githubusercontent.com/Rsousa1213/Analise-desportiva-2026/main/fundo_estadio.jpg"
+    # URL da imagem do estádio gerada e integrada
+    url_imagem = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920&auto=format&fit=crop" # Pode substituir pelo link direto da imagem se preferir carregar para o seu repositório GitHub
     st.markdown(
         f"""
         <style>
@@ -83,26 +84,11 @@ st.markdown("### ⚽ Analise 26/27 - Rigor Estatístico & Inteligência Avançad
 LEAGUES_CONFIG = {
     "J-League": {
         "teams": [
-            "Kashiwa Reysol",
-            "Vissel Kobe",
-            "Kashima Antlers",
-            "Gamba Osaka",
-            "Cerezo Osaka",
-            "Yokohama F. Marinos",
-            "FC Tokyo",
-            "Urawa Red Diamonds",
-            "Avispa Fukuoka",
-            "Fagiano Okayama",
-            "Kyoto Sanga",
-            "FC Machida Zelvia",
-            "Tokyo Verdy",
-            "Sanfrecce Hiroshima",
-            "Kawasaki Frontale",
-            "Nagoya Grampus",
-            "JEF United Ichihara Chiba",
-            "V-Varen Nagasaki",
-            "Mito HollyHock",
-            "Shimizu S-Pulse",
+            "Kashiwa Reysol", "Vissel Kobe", "Kashima Antlers", "Gamba Osaka",
+            "Cerezo Osaka", "Yokohama F. Marinos", "FC Tokyo", "Urawa Red Diamonds",
+            "Avispa Fukuoka", "Fagiano Okayama", "Kyoto Sanga", "FC Machida Zelvia",
+            "Tokyo Verdy", "Sanfrecce Hiroshima", "Kawasaki Frontale", "Nagoya Grampus",
+            "JEF United Ichihara Chiba", "V-Varen Nagasaki", "Mito HollyHock", "Shimizu S-Pulse",
         ],
         "csv_url": "",
     },
