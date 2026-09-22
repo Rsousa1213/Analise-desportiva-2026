@@ -20,24 +20,26 @@ def aplicar_estilo_visual():
     st.markdown(
         f"""
         <style>
-        /* Aplicar a imagem de fundo diretamente no contentor principal do Streamlit */
-        [data-testid="stAppViewContainer"] {{
-            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.9)), url('{url_imagem}');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
+        /* Forçar a imagem de fundo no contentor principal da aplicação com prioridade máxima */
+        .stApp {{
+            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.90)), url('{url_imagem}') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            background-attachment: fixed !important;
         }}
 
-        /* Garantir transparência no cabeçalho e na barra principal */
-        [data-testid="stHeader"], .main, [data-testid="stMain"] {{
+        /* Garantir transparência total em todas as camadas intermédias do Streamlit */
+        [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main, [data-testid="stMain"] {{
             background: transparent !important;
         }}
 
+        /* Barra lateral com fundo escuro semi-transparente para destacar os controlos */
         [data-testid="stSidebar"] {{
             background-color: rgba(15, 15, 15, 0.92) !important;
         }}
 
+        /* Caixa de conteúdo principal com transparência elegante */
         [data-testid="block-container"] {{
             background-color: rgba(22, 22, 22, 0.88) !important;
             border-radius: 16px !important;
