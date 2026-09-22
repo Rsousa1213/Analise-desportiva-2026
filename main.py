@@ -31,7 +31,7 @@ def aplicar_estilo_visual():
     st.markdown(
         f"""
         <style>
-        .stApp {{
+        [data-testid="stAppViewContainer"] {{
             background-image: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.9)), url('{background_css}') !important;
             background-size: cover !important;
             background-position: center !important;
