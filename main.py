@@ -31,16 +31,24 @@ def aplicar_estilo_visual():
     st.markdown(
         f"""
         <style>
-        [data-testid="stAppViewContainer"] {{
-            background-image: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.9)), url('{background_css}') !important;
+        /* Forçar fundo em todos os contentores principais do Streamlit */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.9)), url('{background_css}') !important;
             background-size: cover !important;
             background-position: center !important;
             background-repeat: no-repeat !important;
             background-attachment: fixed !important;
         }}
-        [data-testid="stHeader"], [data-testid="stSidebar"] {{
-            background-color: rgba(15, 15, 15, 0.85) !important;
+        
+        /* Tornar a área de conteúdo transparente para deixar ver o fundo */
+        .main, [data-testid="stMain"], [data-testid="block-container"] {{
+            background-color: transparent !important;
         }}
+
+        [data-testid="stSidebar"] {{
+            background-color: rgba(15, 15, 15, 0.90) !important;
+        }}
+
         .stMainBlockContainer {{
             background-color: rgba(22, 22, 22, 0.92) !important;
             border-radius: 16px !important;
@@ -48,18 +56,22 @@ def aplicar_estilo_visual():
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }}
+
         h1, h2, h3, p, label, .stMarkdown {{
             color: #f0f2f6 !important;
         }}
+
         div[data-testid="stMetric"] {{
             background-color: rgba(35, 35, 35, 0.85);
             padding: 15px;
             border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.08);
         }}
+
         div[data-testid="stMetricValue"] {{
             font-size: 1.8rem !important;
         }}
+
         .badge-sintetico {{
             display: inline-block;
             background-color: rgba(180, 60, 20, 0.85);
@@ -70,6 +82,7 @@ def aplicar_estilo_visual():
             font-weight: 600;
             margin-bottom: 10px;
         }}
+
         .badge-real {{
             display: inline-block;
             background-color: rgba(30, 120, 60, 0.85);
