@@ -5,8 +5,6 @@ import streamlit as st
 import sqlite3
 import os
 from datetime import datetime
-import base64
-import requests
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(
@@ -18,46 +16,33 @@ st.set_page_config(
 
 def aplicar_estilo_visual():
     url_imagem = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920&auto=format&fit=crop"
-    
-    try:
-        response = requests.get(url_imagem, timeout=5)
-        encoded_image = base64.b64encode(response.content).decode("utf-8")
-        background_css = f"data:image/jpeg;base64,{encoded_image}"
-    except Exception:
-        background_css = url_imagem
 
     st.markdown(
         f"""
         <style>
-        /* 1. Criar uma camada de fundo fixa que ocupa o ecrã inteiro */
-        .bg-fundo-estadio {{
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.9)), url('{background_css}');
+        /* Aplicar a imagem de fundo diretamente no contentor principal do Streamlit */
+        [data-testid="stAppViewContainer"] {{
+            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.9)), url('{url_imagem}');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
-            z-index: -999;
         }}
 
-        /* 2. Tornar todos os fundos nativos do Streamlit transparentes */
-        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main, [data-testid="stMain"] {{
+        /* Garantir transparência no cabeçalho e na barra principal */
+        [data-testid="stHeader"], .main, [data-testid="stMain"] {{
             background: transparent !important;
         }}
 
         [data-testid="stSidebar"] {{
-            background-color: rgba(15, 15, 15, 0.90) !important;
+            background-color: rgba(15, 15, 15, 0.92) !important;
         }}
 
         [data-testid="block-container"] {{
-            background-color: rgba(22, 22, 22, 0.92) !important;
+            background-color: rgba(22, 22, 22, 0.88) !important;
             border-radius: 16px !important;
             padding: 2.5rem !important;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
             margin-top: 2rem;
         }}
@@ -99,9 +84,6 @@ def aplicar_estilo_visual():
             margin-bottom: 10px;
         }}
         </style>
-        
-        <!-- Elemento HTML injetado para garantir o fundo absoluto -->
-        <div class="bg-fundo-estadio"></div>
         """,
         unsafe_allow_html=True,
     )
