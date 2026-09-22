@@ -5,6 +5,8 @@ import streamlit as st
 import sqlite3
 import os
 from datetime import datetime
+import base64
+import requests
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(
@@ -15,13 +17,22 @@ st.set_page_config(
 
 
 def aplicar_estilo_visual():
-    # URL da imagem do estádio gerada e integrada
-    url_imagem = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920&auto=format&fit=crop" # Pode substituir pelo link direto da imagem se preferir carregar para o seu repositório GitHub
+    # URL da imagem de fundo de alta qualidade
+    url_imagem = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920&auto=format&fit=crop"
+    
+    # Converter a imagem para base64 para garantir carregamento infalível via CSS no Streamlit
+    try:
+        response = requests.get(url_imagem, timeout=5)
+        encoded_image = base64.b64encode(response.content).decode("utf-8")
+        background_css = f"data:image/jpeg;base64,{encoded_image}"
+    except Exception:
+        background_css = url_imagem
+
     st.markdown(
         f"""
         <style>
         .stApp {{
-            background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.85)), url('{url_imagem}') !important;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.9)), url('{background_css}') !important;
             background-size: cover !important;
             background-position: center !important;
             background-repeat: no-repeat !important;
