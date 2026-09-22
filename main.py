@@ -5,6 +5,8 @@ import streamlit as st
 import sqlite3
 import os
 from datetime import datetime
+import base64
+import requests
 
 # 1. Configuração da Página e Estilo Visual
 st.set_page_config(
@@ -13,33 +15,37 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
 def aplicar_estilo_visual():
+    # URL da imagem
     url_imagem = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920&auto=format&fit=crop"
+    
+    try:
+        # Descarregar a imagem e converter para base64 para garantir leitura direta sem bloqueios do browser
+        response = requests.get(url_imagem, timeout=5)
+        encoded_image = base64.b64encode(response.content).decode()
+        background_style = f"background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.90)), url('data:image/jpeg;base64,{encoded_image}') !important;"
+    except Exception:
+        background_style = "background-color: #0e1117 !important;"
 
     st.markdown(
         f"""
         <style>
-        /* Forçar o fundo em toda a janela e contentor principal do Streamlit */
         .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
-            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.90)), url('{url_imagem}') !important;
+            {background_style}
             background-size: cover !important;
             background-position: center !important;
             background-repeat: no-repeat !important;
             background-attachment: fixed !important;
         }}
 
-        /* Garantir transparência no cabeçalho superior */
         [data-testid="stHeader"] {{
             background: transparent !important;
         }}
 
-        /* Barra lateral com fundo escuro semi-transparente para destacar os controlos */
         [data-testid="stSidebar"] {{
             background-color: rgba(15, 15, 15, 0.92) !important;
         }}
 
-        /* Caixa de conteúdo principal com transparência elegante */
         [data-testid="block-container"] {{
             background-color: rgba(22, 22, 22, 0.88) !important;
             border-radius: 16px !important;
@@ -89,7 +95,6 @@ def aplicar_estilo_visual():
         """,
         unsafe_allow_html=True,
     )
-
 
 aplicar_estilo_visual()
 
@@ -215,7 +220,6 @@ JOGOS_MIN_PARA_CONFIANCA_TOTAL = 8
 RHO_DIXON_COLES = -0.10
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "historico_apostas.db")
 
-
 def rho_correction(gh, ga, lam_h, lam_a, rho):
     if gh == 0 and ga == 0:
         return 1 - (lam_h * lam_a * rho)
@@ -227,7 +231,6 @@ def rho_correction(gh, ga, lam_h, lam_a, rho):
         return 1 - rho
     return 1.0
 
-
 def media_com_shrinkage(valores, pesos, media_liga, n_min=JOGOS_MIN_PARA_CONFIANCA_TOTAL):
     n = len(valores)
     if n == 0:
@@ -235,7 +238,6 @@ def media_com_shrinkage(valores, pesos, media_liga, n_min=JOGOS_MIN_PARA_CONFIAN
     media_equipa = np.average(valores, weights=pesos)
     peso_confianca = min(n / n_min, 1.0)
     return peso_confianca * media_equipa + (1 - peso_confianca) * media_liga
-
 
 def calcular_lambdas_mercado(df_liga, home_team, away_team, col_pro_casa, col_pro_fora, floor=0.4):
     df_home_all = df_liga[df_liga["HomeTeam"] == home_team]
@@ -254,7 +256,6 @@ def calcular_lambdas_mercado(df_liga, home_team, away_team, col_pro_casa, col_pr
     lambda_fora = max(floor, (ataque_fora / media_liga_fora) * (defesa_casa / media_liga_fora) * media_liga_fora)
 
     return lambda_casa, lambda_fora
-
 
 @st.cache_data(ttl=3600)
 def carregar_dados_reais(liga_nome, team_list):
@@ -305,7 +306,6 @@ def carregar_dados_reais(liga_nome, team_list):
     df["Peso_Temporal"] = np.linspace(0.5, 1.0, n_rows)
     return df, dados_reais
 
-
 # --- Persistência do histórico de apostas ---
 def inicializar_bd():
     conn = sqlite3.connect(DB_PATH)
@@ -333,7 +333,6 @@ def inicializar_bd():
     conn.commit()
     conn.close()
 
-
 def registar_aposta(liga, casa, fora, mercado, prob, odd, edge, stake, casa_aposta=""):
     conn = sqlite3.connect(DB_PATH)
     conn.execute(
@@ -346,20 +345,17 @@ def registar_aposta(liga, casa, fora, mercado, prob, odd, edge, stake, casa_apos
     conn.commit()
     conn.close()
 
-
 def atualizar_odd_fecho(aposta_id, odd_fecho):
     conn = sqlite3.connect(DB_PATH)
     conn.execute("UPDATE apostas SET odd_fecho=? WHERE id=?", (odd_fecho, aposta_id))
     conn.commit()
     conn.close()
 
-
 def obter_apostas():
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query("SELECT * FROM apostas ORDER BY id DESC", conn)
     conn.close()
     return df
-
 
 def atualizar_resultado(aposta_id, resultado):
     conn = sqlite3.connect(DB_PATH)
@@ -373,7 +369,6 @@ def atualizar_resultado(aposta_id, resultado):
     conn.execute("UPDATE apostas SET resultado=?, lucro=? WHERE id=?", (resultado, lucro, aposta_id))
     conn.commit()
     conn.close()
-
 
 inicializar_bd()
 
