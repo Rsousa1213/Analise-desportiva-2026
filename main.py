@@ -79,8 +79,18 @@ aplicar_estilo_visual()
 # Título Principal
 st.markdown("### ⚽ Analise 26/27 - Rigor Estatístico & Inteligência Avançada")
 
-# 2. Mapeamento das 10 Ligas Oficiais Definidas
+# 2. Mapeamento das Ligas Oficiais (com a J-League integrada)
 LEAGUES_CONFIG = {
+    "J-League": {
+        "teams": [
+            "Avispa Fukuoka", "Cerezo Osaka", "Fagiano Okayama", "FC Machida Zelvia", 
+            "FC Tokyo", "Gamba Osaka", "JEF United Chiba", "Kashima Antlers", 
+            "Kashiwa Reysol", "Kawasaki Frontale", "Kyoto Sanga FC", "Mito HollyHock", 
+            "Nagoya Grampus", "Sanfrecce Hiroshima", "Shimizu S-Pulse", "Tokyo Verdy", 
+            "Urawa Red Diamonds", "V-Varen Nagasaki", "Vissel Kobe", "Yokohama F. Marinos",
+        ],
+        "csv_url": "",
+    },
     "Portuguesa": {
         "teams": [
             "Académico Casa Pia AC", "CD Nacional", "Estoril Praia", "Estrela Amadora",
