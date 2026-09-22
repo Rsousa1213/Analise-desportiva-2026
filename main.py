@@ -79,15 +79,30 @@ aplicar_estilo_visual()
 # Título Principal
 st.markdown("### ⚽ Analise 26/27 - Rigor Estatístico & Inteligência Avançada")
 
-# 2. Mapeamento das Ligas Oficiais (com a J-League integrada)
+# 2. Mapeamento das Ligas Oficiais (com a J-League atualizada)
 LEAGUES_CONFIG = {
     "J-League": {
         "teams": [
-            "Avispa Fukuoka", "Cerezo Osaka", "Fagiano Okayama", "FC Machida Zelvia", 
-            "FC Tokyo", "Gamba Osaka", "JEF United Chiba", "Kashima Antlers", 
-            "Kashiwa Reysol", "Kawasaki Frontale", "Kyoto Sanga FC", "Mito HollyHock", 
-            "Nagoya Grampus", "Sanfrecce Hiroshima", "Shimizu S-Pulse", "Tokyo Verdy", 
-            "Urawa Red Diamonds", "V-Varen Nagasaki", "Vissel Kobe", "Yokohama F. Marinos",
+            "Avispa Fukuoka",
+            "Cerezo Osaka",
+            "Fagiano Okayama",
+            "FC Machida Zelvia",
+            "FC Tokyo",
+            "Gamba Osaka",
+            "JEF United Chiba",
+            "Kashima Antlers",
+            "Kashiwa Reysol",
+            "Kawasaki Frontale",
+            "Kyoto Sanga FC",
+            "Mito HollyHock",
+            "Nagoya Grampus",
+            "Sanfrecce Hiroshima",
+            "Shimizu S-Pulse",
+            "Tokyo Verdy",
+            "Urawa Red Diamonds",
+            "V-Varen Nagasaki",
+            "Vissel Kobe",
+            "Yokohama F. Marinos",
         ],
         "csv_url": "",
     },
@@ -422,7 +437,7 @@ with tab_analise:
     with col1:
         home_team = st.selectbox("Equipa da Casa", teams_available, index=0 if len(teams_available) > 0 else 0)
     with col2:
-        away_team = st.selectbox("Equipa Visitante", teams_available, index=1 if len(teams_available) > 1 else 0)
+        away_team = st.selectbox("Equipa Visitante", teams_available, index=1 if len(teams_available) > 1 else 1)
 
     if home_team == away_team:
         st.warning("⚠️ Seleciona duas equipas diferentes para realizar a análise.")
