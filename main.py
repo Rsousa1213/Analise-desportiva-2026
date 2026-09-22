@@ -84,26 +84,26 @@ LEAGUES_CONFIG = {
     "J-League": {
         "teams": [
             "Kashiwa Reysol",
-    "Vissel Kobe",
-    "Kashima Antlers",
-    "Gamba Osaka",
-    "Cerezo Osaka",
-    "Yokohama Marinos",
-    "Fukuoka",
-    "Okayama",
-    "FC Tokyo",
-    "Urawa Reds",
-    "Kyoto",
-    "Machida Zelvia",
-    "JEF United Chiba",
-    "V-Varen Nagasaki",
-    "Tokyo Verdy",
-    "Hiroshima Sanfrecce",
-    "Mito",
-    "Shimizu S-Pulse",
-    "Kawasaki Frontale",
-    "Nagoya Grampus"
-   ],
+            "Vissel Kobe",
+            "Kashima Antlers",
+            "Gamba Osaka",
+            "Cerezo Osaka",
+            "Yokohama F. Marinos",
+            "FC Tokyo",
+            "Urawa Red Diamonds",
+            "Avispa Fukuoka",
+            "Fagiano Okayama",
+            "Kyoto Sanga",
+            "FC Machida Zelvia",
+            "Tokyo Verdy",
+            "Sanfrecce Hiroshima",
+            "Kawasaki Frontale",
+            "Nagoya Grampus",
+            "JEF United Ichihara Chiba",
+            "V-Varen Nagasaki",
+            "Mito HollyHock",
+            "Shimizu S-Pulse",
+        ],
         "csv_url": "",
     },
     "Portuguesa": {
@@ -391,8 +391,6 @@ stake_pct_max = st.sidebar.slider(
 fracao_kelly = st.sidebar.slider(
     "Fração de Kelly a usar",
     min_value=0.1, max_value=1.0, value=0.25, step=0.05,
-    help="Kelly puro (1.0) maximiza crescimento a longo prazo mas com muita variância. "
-         "Valores entre 0.25 e 0.5 ('Kelly fracionário') são o standard para reduzir risco de ruína."
 )
 
 st.sidebar.markdown("---")
@@ -566,7 +564,7 @@ with tab_analise:
                     banca_inicial * kelly_multipla * fracao_kelly * 0.5,
                     banca_inicial * (stake_pct_max / 100),
                 )
-                status_mult = f"🚀 Múltipla de Valor ({len(mercados_para_multipla)} seleções, 1 por grupo correlacionado)"
+                status_mult = f"🚀 Múltipla de Valor ({len(mercados_para_multipla)} seleções)"
             else:
                 stake_rec_mult = 0.0
                 status_mult = f"⚖️ Múltipla Neutra ({len(mercados_para_multipla)} seleções)"
@@ -626,12 +624,6 @@ with tab_analise:
 
 with tab_historico:
     st.subheader("📈 Histórico & Desempenho Real do Modelo")
-    st.caption(
-        "Esta aba mede se o modelo tem edge de verdade a longo prazo — taxa de acerto "
-        "e ROI, não apenas 'sensação' de sucesso. Marca o resultado de cada sugestão "
-        "assim que o jogo terminar."
-    )
-
     df_hist = obter_apostas()
 
     if df_hist.empty:
@@ -659,7 +651,7 @@ with tab_historico:
                         atualizar_resultado(row["id"], "Anulada")
                         st.rerun()
 
-                    st.markdown("**Odd de fecho (CLV)** — regista pouco antes do jogo começar")
+                    st.markdown("**Odd de fecho (CLV)**")
                     col_d, col_e = st.columns([2, 1])
                     odd_fecho_atual = row["odd_fecho"] if pd.notna(row.get("odd_fecho")) else float(row["odd"])
                     nova_odd_fecho = col_d.number_input(
@@ -669,9 +661,6 @@ with tab_historico:
                     if col_e.button("Guardar", key=f"guardaroddfecho_{row['id']}"):
                         atualizar_odd_fecho(row["id"], nova_odd_fecho)
                         st.rerun()
-                    if pd.notna(row.get("odd_fecho")):
-                        clv_pct = (row["odd"] / row["odd_fecho"] - 1) * 100
-                        st.caption(f"CLV atual: {clv_pct:+.1f}% ({'bateste o fecho ✅' if clv_pct > 0 else 'ficaste abaixo do fecho'})")
         else:
             st.caption("Sem apostas pendentes de momento.")
 
@@ -693,36 +682,8 @@ with tab_historico:
             c3.metric("Lucro / Prejuízo Total", f"€{lucro_total:.2f}")
             c4.metric("ROI", f"{roi*100:.1f}%")
 
-            com_odd_fecho = df_hist[df_hist["odd_fecho"].notna()].copy()
-            if not com_odd_fecho.empty:
-                com_odd_fecho["clv_pct"] = (com_odd_fecho["odd"] / com_odd_fecho["odd_fecho"] - 1) * 100
-                clv_medio = com_odd_fecho["clv_pct"].mean()
-                pct_bateu_fecho = (com_odd_fecho["clv_pct"] > 0).mean() * 100
-                c5, c6 = st.columns(2)
-                c5.metric("CLV Médio", f"{clv_medio:+.1f}%", help="Diferença média entre a odd a que apostaste e a odd de fecho do mercado. Positivo = bates o mercado.")
-                c6.metric("% Apostas que Bateram o Fecho", f"{pct_bateu_fecho:.0f}%")
-                st.caption(
-                    f"Baseado em {len(com_odd_fecho)} aposta(s) com odd de fecho registada. "
-                    "O CLV é o indicador mais fiável de edge real a longo prazo — mais do que "
-                    "o resultado de qualquer aposta isolada."
-                )
-            else:
-                st.caption("ℹ️ Ainda não registaste nenhuma odd de fecho — vê a secção 'Apostas Pendentes' para começares a captar o CLV.")
-
             hist_ordenado = resolvidas.sort_values("data_registo").copy()
             hist_ordenado["saldo_acumulado"] = hist_ordenado["lucro"].cumsum()
             st.line_chart(hist_ordenado.set_index("data_registo")["saldo_acumulado"])
-
-            st.caption(
-                "💡 Nota: isto mede taxa de acerto e ROI reais, que já dizem muito mais do que "
-                "uma 'sensação' de sucesso de curto prazo. A métrica ainda mais rigorosa usada "
-                "por profissionais — Closing Line Value (comparar a tua odd com a odd de fecho "
-                "do mercado) — exigiria uma API de odds ao vivo, o que fica como possível "
-                "evolução futura."
-            )
         else:
             st.caption("Ainda não há apostas com resultado registado.")
-
-        st.markdown("---")
-        with st.expander("🗂️ Ver todas as apostas registadas"):
-            st.dataframe(df_hist, use_container_width=True)
