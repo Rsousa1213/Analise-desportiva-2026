@@ -17,10 +17,8 @@ st.set_page_config(
 
 
 def aplicar_estilo_visual():
-    # URL da imagem de fundo de alta qualidade
     url_imagem = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920&auto=format&fit=crop"
     
-    # Converter a imagem para base64 para garantir carregamento infalível via CSS no Streamlit
     try:
         response = requests.get(url_imagem, timeout=5)
         encoded_image = base64.b64encode(response.content).decode("utf-8")
@@ -31,30 +29,37 @@ def aplicar_estilo_visual():
     st.markdown(
         f"""
         <style>
-        /* Forçar fundo em todos os contentores principais do Streamlit */
-        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
-            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.9)), url('{background_css}') !important;
-            background-size: cover !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            background-attachment: fixed !important;
+        /* 1. Criar uma camada de fundo fixa que ocupa o ecrã inteiro */
+        .bg-fundo-estadio {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.9)), url('{background_css}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            z-index: -999;
         }}
-        
-        /* Tornar a área de conteúdo transparente para deixar ver o fundo */
-        .main, [data-testid="stMain"], [data-testid="block-container"] {{
-            background-color: transparent !important;
+
+        /* 2. Tornar todos os fundos nativos do Streamlit transparentes */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main, [data-testid="stMain"] {{
+            background: transparent !important;
         }}
 
         [data-testid="stSidebar"] {{
             background-color: rgba(15, 15, 15, 0.90) !important;
         }}
 
-        .stMainBlockContainer {{
+        [data-testid="block-container"] {{
             background-color: rgba(22, 22, 22, 0.92) !important;
             border-radius: 16px !important;
             padding: 2.5rem !important;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 2rem;
         }}
 
         h1, h2, h3, p, label, .stMarkdown {{
@@ -94,6 +99,9 @@ def aplicar_estilo_visual():
             margin-bottom: 10px;
         }}
         </style>
+        
+        <!-- Elemento HTML injetado para garantir o fundo absoluto -->
+        <div class="bg-fundo-estadio"></div>
         """,
         unsafe_allow_html=True,
     )
@@ -104,7 +112,7 @@ aplicar_estilo_visual()
 # Título Principal
 st.markdown("### ⚽ Analise 26/27 - Rigor Estatístico & Inteligência Avançada")
 
-# 2. Mapeamento das Ligas Oficiais (com a J-League atualizada)
+# 2. Mapeamento das Ligas Oficiais
 LEAGUES_CONFIG = {
     "J-League": {
         "teams": [
