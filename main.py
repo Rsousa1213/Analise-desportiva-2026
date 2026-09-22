@@ -20,8 +20,8 @@ def aplicar_estilo_visual():
     st.markdown(
         f"""
         <style>
-        /* Forçar a imagem de fundo no contentor principal da aplicação com prioridade máxima */
-        .stApp {{
+        /* Forçar o fundo em toda a janela e contentor principal do Streamlit */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
             background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.90)), url('{url_imagem}') !important;
             background-size: cover !important;
             background-position: center !important;
@@ -29,8 +29,8 @@ def aplicar_estilo_visual():
             background-attachment: fixed !important;
         }}
 
-        /* Garantir transparência total em todas as camadas intermédias do Streamlit */
-        [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main, [data-testid="stMain"] {{
+        /* Garantir transparência no cabeçalho superior */
+        [data-testid="stHeader"] {{
             background: transparent !important;
         }}
 
