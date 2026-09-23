@@ -4,6 +4,7 @@ from scipy.stats import poisson
 import streamlit as st
 import sqlite3
 import os
+import requests
 from datetime import datetime
 
 # 1. Configuração da Página e Estilo Visual
@@ -55,13 +56,14 @@ def aplicar_estilo_visual():
         }}
         .badge-sintetico {{
             display: inline-block;
-            background-color: rgba(180, 60, 20, 0.85);
-            color: #fff !important;
+            background-color: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.45) !important;
             padding: 4px 12px;
             border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.78rem;
+            font-weight: 400;
             margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }}
         .badge-real {{
             display: inline-block;
@@ -192,6 +194,65 @@ LEAGUES_CONFIG = {
 JOGOS_MIN_PARA_CONFIANCA_TOTAL = 8   # nº de jogos a partir do qual paramos de "puxar" para a média da liga
 RHO_DIXON_COLES = -0.10              # correlação típica entre golos casa/fora em marcadores baixos (valor de referência da literatura)
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "historico_apostas.db")
+
+# --- Calendário de jogos via API-Football (gratuito, 100 pedidos/dia) ---
+API_FOOTBALL_HOST = "https://v3.football.api-sports.io"
+
+# Nome da competição a procurar na API-Football + país (para desambiguar
+# ligas com o mesmo nome, ex: "Serie A" existe em Itália E no Brasil).
+LIGA_INFO_API_FOOTBALL = {
+    "Portuguesa": ("Primeira Liga", "Portugal"),
+    "Inglesa": ("Premier League", "England"),
+    "Espanhola": ("La Liga", "Spain"),
+    "Italiana": ("Serie A", "Italy"),
+    "Francesa": ("Ligue 1", "France"),
+    "Brasileira Série A": ("Serie A", "Brazil"),
+    "Brasileira Série B": ("Serie B", "Brazil"),
+    "Argentina": ("Liga Profesional Argentina", "Argentina"),
+    "Liga Campeoes": ("UEFA Champions League", "World"),
+    "Liga Europa": ("UEFA Europa League", "World"),
+}
+
+
+@st.cache_data(ttl=86400)  # o ID de uma liga não muda de um dia para o outro
+def obter_id_liga_api_football(api_key, nome_busca, pais):
+    """Pergunta à própria API-Football qual é o ID da competição, em vez de
+    fixar o número manualmente no código (isso evitaria mudanças na API ou
+    erros de digitação, mas arriscaria usar um ID errado sem darmos conta)."""
+    headers = {"x-apisports-key": api_key}
+    try:
+        r = requests.get(
+            f"{API_FOOTBALL_HOST}/leagues",
+            headers=headers, params={"search": nome_busca}, timeout=10,
+        )
+        data = r.json()
+        if data.get("errors"):
+            return None, str(data["errors"])
+        resultados = data.get("response", [])
+        candidatos = [x for x in resultados if x["country"]["name"].lower() == pais.lower()]
+        escolhido = (candidatos or resultados)
+        if escolhido:
+            return escolhido[0]["league"]["id"], None
+        return None, "Competição não encontrada na API-Football."
+    except Exception as e:
+        return None, str(e)
+
+
+@st.cache_data(ttl=3600)  # atualiza a cada hora, para não gastar todos os pedidos diários
+def obter_jogos_do_dia_api_football(api_key, league_id, data_str):
+    headers = {"x-apisports-key": api_key}
+    try:
+        r = requests.get(
+            f"{API_FOOTBALL_HOST}/fixtures",
+            headers=headers, params={"league": league_id, "date": data_str, "season": data_str[:4]},
+            timeout=10,
+        )
+        data = r.json()
+        if data.get("errors"):
+            return [], str(data["errors"])
+        return data.get("response", []), None
+    except Exception as e:
+        return [], str(e)
 
 
 def rho_correction(gh, ga, lam_h, lam_a, rho):
@@ -382,6 +443,15 @@ selected_league = st.sidebar.selectbox(
 )
 
 st.sidebar.markdown("---")
+st.sidebar.subheader("📅 Jogos de Hoje (opcional)")
+api_football_key = st.sidebar.text_input(
+    "Chave API-Football (grátis)", value="", type="password",
+    help="Regista-te gratuitamente em dashboard.api-football.com (via RapidAPI ou direto) "
+         "para obteres uma chave grátis com 100 pedidos/dia — suficiente para veres o "
+         "calendário de jogos de hoje em qualquer uma destas ligas, sem custos.",
+)
+
+st.sidebar.markdown("---")
 st.sidebar.subheader("Banca & Gestão")
 banca_inicial = st.sidebar.number_input(
     "Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0
@@ -425,6 +495,31 @@ with tab_analise:
   # 3. Corpo Principal - Análise de Jogos
   teams_available = LEAGUES_CONFIG[selected_league]["teams"]
   df_liga, dados_sao_reais = carregar_dados_reais(selected_league, teams_available)
+
+  if api_football_key:
+    with st.expander(f"📅 Jogos de hoje — {selected_league}", expanded=False):
+      nome_busca, pais_busca = LIGA_INFO_API_FOOTBALL.get(selected_league, (selected_league, ""))
+      league_id, erro_id = obter_id_liga_api_football(api_football_key, nome_busca, pais_busca)
+      if erro_id:
+        st.warning(f"Não foi possível identificar esta competição na API-Football: {erro_id}")
+      else:
+        hoje_str = datetime.now().strftime("%Y-%m-%d")
+        jogos, erro_jogos = obter_jogos_do_dia_api_football(api_football_key, league_id, hoje_str)
+        if erro_jogos:
+          st.warning(f"Não foi possível obter os jogos de hoje: {erro_jogos}")
+        elif not jogos:
+          st.caption("Sem jogos agendados hoje nesta competição.")
+        else:
+          for jogo in jogos:
+            casa = jogo["teams"]["home"]["name"]
+            fora = jogo["teams"]["away"]["name"]
+            hora = jogo["fixture"]["date"][11:16]
+            estado = jogo["fixture"]["status"]["long"]
+            placar = jogo.get("goals", {})
+            if placar.get("home") is not None:
+              st.write(f"⚽ **{casa} {placar['home']} - {placar['away']} {fora}** · {estado}")
+            else:
+              st.write(f"🕒 **{casa} vs {fora}** · {hora} · {estado}")
 
   if dados_sao_reais:
     st.markdown('<span class="badge-real">✅ Dados reais (football-data.co.uk)</span>', unsafe_allow_html=True)
