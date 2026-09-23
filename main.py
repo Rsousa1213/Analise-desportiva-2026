@@ -88,6 +88,21 @@ st.markdown("### ⚽ Analise 26/27 - Rigor Estatístico & Inteligência Avançad
 
 # 2. Mapeamento das 10 Ligas Oficiais Definidas
 LEAGUES_CONFIG = {
+    "Liga das Nações": {
+        "teams": [
+            "Albânia", "Alemanha", "Andorra", "Arménia", "Áustria", "Azerbaijão",
+            "Bélgica", "Bielorrússia", "Bósnia e Herzegovina", "Bulgária", "Cazaquistão",
+            "Chipre", "Chéquia", "Croácia", "Dinamarca", "Escócia", "Eslováquia",
+            "Eslovénia", "Espanha", "Estónia", "Ilhas Faroé", "Finlândia", "França",
+            "Geórgia", "Gibraltar", "Grécia", "Hungria", "Inglaterra", "Irlanda",
+            "Irlanda do Norte", "Islândia", "Israel", "Itália", "Kosovo", "Letónia",
+            "Liechtenstein", "Lituânia", "Luxemburgo", "Macedónia do Norte", "Malta",
+            "Moldávia", "Montenegro", "Noruega", "Países Baixos", "País de Gales",
+            "Polónia", "Portugal", "Roménia", "San Marino", "Sérvia", "Suécia",
+            "Suíça", "Turquia", "Ucrânia",
+        ],
+        "csv_url": "",
+    },
     "Alemã": {
         "teams": [
             "Bayern de Munique", "Borussia Dortmund", "RB Leipzig", "Bayer Leverkusen",
