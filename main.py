@@ -195,62 +195,36 @@ JOGOS_MIN_PARA_CONFIANCA_TOTAL = 8   # nº de jogos a partir do qual paramos de 
 RHO_DIXON_COLES = -0.10              # correlação típica entre golos casa/fora em marcadores baixos (valor de referência da literatura)
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "historico_apostas.db")
 
-# --- Calendário de jogos via API-Football (gratuito, 100 pedidos/dia) ---
-API_FOOTBALL_HOST = "https://v3.football.api-sports.io"
+# --- Calendário de jogos via football-data.org (gratuito, cobre a época ATUAL,
+# ao contrário da API-Football cujo plano grátis só cobre épocas 2022-2024) ---
+FOOTBALL_DATA_ORG_HOST = "https://api.football-data.org/v4"
 
-# Nome da competição a procurar na API-Football + país (para desambiguar
-# ligas com o mesmo nome, ex: "Serie A" existe em Itália E no Brasil).
-LIGA_INFO_API_FOOTBALL = {
-    "Portuguesa": ("Primeira Liga", "Portugal"),
-    "Inglesa": ("Premier League", "England"),
-    "Espanhola": ("La Liga", "Spain"),
-    "Italiana": ("Serie A", "Italy"),
-    "Francesa": ("Ligue 1", "France"),
-    "Brasileira Série A": ("Serie A", "Brazil"),
-    "Brasileira Série B": ("Serie B", "Brazil"),
-    "Argentina": ("Liga Profesional Argentina", "Argentina"),
-    "Liga Campeoes": ("UEFA Champions League", "World"),
-    "Liga Europa": ("UEFA Europa League", "World"),
+# Código da competição no football-data.org. O plano gratuito só cobre estas
+# 7 — Brasileira Série B, Argentina e Liga Europa não têm cobertura gratuita
+# em nenhuma fonte de dados em tempo real que encontrámos até agora.
+LIGA_CODIGO_FOOTBALL_DATA_ORG = {
+    "Portuguesa": "PPL",
+    "Inglesa": "PL",
+    "Espanhola": "PD",
+    "Italiana": "SA",
+    "Francesa": "FL1",
+    "Brasileira Série A": "BSA",
+    "Liga Campeoes": "CL",
 }
 
 
-@st.cache_data(ttl=86400)  # o ID de uma liga não muda de um dia para o outro
-def obter_id_liga_api_football(api_key, nome_busca, pais):
-    """Pergunta à própria API-Football qual é o ID da competição, em vez de
-    fixar o número manualmente no código (isso evitaria mudanças na API ou
-    erros de digitação, mas arriscaria usar um ID errado sem darmos conta)."""
-    headers = {"x-apisports-key": api_key}
+@st.cache_data(ttl=3600)  # atualiza a cada hora — o limite é 10 pedidos/minuto
+def obter_jogos_do_dia_football_data_org(api_key, codigo_competicao, data_str):
+    headers = {"X-Auth-Token": api_key}
     try:
         r = requests.get(
-            f"{API_FOOTBALL_HOST}/leagues",
-            headers=headers, params={"search": nome_busca}, timeout=10,
+            f"{FOOTBALL_DATA_ORG_HOST}/competitions/{codigo_competicao}/matches",
+            headers=headers, params={"dateFrom": data_str, "dateTo": data_str}, timeout=10,
         )
         data = r.json()
-        if data.get("errors"):
-            return None, str(data["errors"])
-        resultados = data.get("response", [])
-        candidatos = [x for x in resultados if x["country"]["name"].lower() == pais.lower()]
-        escolhido = (candidatos or resultados)
-        if escolhido:
-            return escolhido[0]["league"]["id"], None
-        return None, "Competição não encontrada na API-Football."
-    except Exception as e:
-        return None, str(e)
-
-
-@st.cache_data(ttl=3600)  # atualiza a cada hora, para não gastar todos os pedidos diários
-def obter_jogos_do_dia_api_football(api_key, league_id, data_str):
-    headers = {"x-apisports-key": api_key}
-    try:
-        r = requests.get(
-            f"{API_FOOTBALL_HOST}/fixtures",
-            headers=headers, params={"league": league_id, "date": data_str, "season": data_str[:4]},
-            timeout=10,
-        )
-        data = r.json()
-        if data.get("errors"):
-            return [], str(data["errors"])
-        return data.get("response", []), None
+        if r.status_code != 200:
+            return [], data.get("message", f"Erro HTTP {r.status_code}")
+        return data.get("matches", []), None
     except Exception as e:
         return [], str(e)
 
@@ -444,11 +418,12 @@ selected_league = st.sidebar.selectbox(
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📅 Jogos de Hoje (opcional)")
-api_football_key = st.sidebar.text_input(
-    "Chave API-Football (grátis)", value="", type="password",
-    help="Regista-te gratuitamente em dashboard.api-football.com (via RapidAPI ou direto) "
-         "para obteres uma chave grátis com 100 pedidos/dia — suficiente para veres o "
-         "calendário de jogos de hoje em qualquer uma destas ligas, sem custos.",
+football_data_org_key = st.sidebar.text_input(
+    "Chave football-data.org (grátis)", value="", type="password",
+    help="Regista-te gratuitamente em football-data.org/client/register para obteres uma "
+         "chave grátis (10 pedidos/minuto) — cobre a época atual em Portuguesa, Inglesa, "
+         "Espanhola, Italiana, Francesa, Brasileira Série A e Liga dos Campeões. "
+         "Brasileira Série B, Argentina e Liga Europa não têm fonte gratuita disponível.",
 )
 
 st.sidebar.markdown("---")
@@ -496,30 +471,33 @@ with tab_analise:
   teams_available = LEAGUES_CONFIG[selected_league]["teams"]
   df_liga, dados_sao_reais = carregar_dados_reais(selected_league, teams_available)
 
-  if api_football_key:
+  if football_data_org_key:
     with st.expander(f"📅 Jogos de hoje — {selected_league}", expanded=False):
-      nome_busca, pais_busca = LIGA_INFO_API_FOOTBALL.get(selected_league, (selected_league, ""))
-      league_id, erro_id = obter_id_liga_api_football(api_football_key, nome_busca, pais_busca)
-      if erro_id:
-        st.warning(f"Não foi possível identificar esta competição na API-Football: {erro_id}")
+      codigo_competicao = LIGA_CODIGO_FOOTBALL_DATA_ORG.get(selected_league)
+      if codigo_competicao is None:
+        st.caption(
+            "Esta competição não tem fonte gratuita de calendário em tempo real disponível "
+            "(cobertura grátis: Portuguesa, Inglesa, Espanhola, Italiana, Francesa, "
+            "Brasileira Série A e Liga dos Campeões)."
+        )
       else:
         hoje_str = datetime.now().strftime("%Y-%m-%d")
-        jogos, erro_jogos = obter_jogos_do_dia_api_football(api_football_key, league_id, hoje_str)
+        jogos, erro_jogos = obter_jogos_do_dia_football_data_org(football_data_org_key, codigo_competicao, hoje_str)
         if erro_jogos:
           st.warning(f"Não foi possível obter os jogos de hoje: {erro_jogos}")
         elif not jogos:
           st.caption("Sem jogos agendados hoje nesta competição.")
         else:
           for jogo in jogos:
-            casa = jogo["teams"]["home"]["name"]
-            fora = jogo["teams"]["away"]["name"]
-            hora = jogo["fixture"]["date"][11:16]
-            estado = jogo["fixture"]["status"]["long"]
-            placar = jogo.get("goals", {})
+            casa = jogo["homeTeam"]["name"]
+            fora = jogo["awayTeam"]["name"]
+            hora_utc = jogo["utcDate"][11:16]
+            estado = jogo["status"]
+            placar = jogo.get("score", {}).get("fullTime", {})
             if placar.get("home") is not None:
               st.write(f"⚽ **{casa} {placar['home']} - {placar['away']} {fora}** · {estado}")
             else:
-              st.write(f"🕒 **{casa} vs {fora}** · {hora} · {estado}")
+              st.write(f"🕒 **{casa} vs {fora}** · {hora_utc} UTC · {estado}")
 
   if dados_sao_reais:
     st.markdown('<span class="badge-real">✅ Dados reais (football-data.co.uk)</span>', unsafe_allow_html=True)
