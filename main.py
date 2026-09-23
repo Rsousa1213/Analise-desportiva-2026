@@ -88,6 +88,16 @@ st.markdown("### ⚽ Analise 26/27 - Rigor Estatístico & Inteligência Avançad
 
 # 2. Mapeamento das 10 Ligas Oficiais Definidas
 LEAGUES_CONFIG = {
+    "Alemã": {
+        "teams": [
+            "Bayern de Munique", "Borussia Dortmund", "RB Leipzig", "Bayer Leverkusen",
+            "VfB Stuttgart", "Eintracht Frankfurt", "SC Freiburg", "1. FC Köln",
+            "1. FC Union Berlin", "1. FSV Mainz 05", "Borussia Mönchengladbach",
+            "TSG Hoffenheim", "Werder Bremen", "FC Augsburg", "SC Paderborn 07",
+            "Schalke 04", "SV Elversberg", "Hamburger SV",
+        ],
+        "csv_url": "https://www.football-data.co.uk/mmh2627/D1.csv",
+    },
     "Portuguesa": {
         "teams": [
             "Académico Casa Pia AC", "CD Nacional", "Estoril Praia", "Estrela Amadora",
@@ -203,6 +213,7 @@ FOOTBALL_DATA_ORG_HOST = "https://api.football-data.org/v4"
 # 7 — Brasileira Série B, Argentina e Liga Europa não têm cobertura gratuita
 # em nenhuma fonte de dados em tempo real que encontrámos até agora.
 LIGA_CODIGO_FOOTBALL_DATA_ORG = {
+    "Alemã": "BL1",
     "Portuguesa": "PPL",
     "Inglesa": "PL",
     "Espanhola": "PD",
