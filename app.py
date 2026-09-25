@@ -14,34 +14,34 @@ st.set_page_config(
 )
 
 
-# Função para carregar e converter a imagem local em Base64
-def get_base64_image(image_path):
+# Função para carregar e detetar automaticamente o formato correto (JPG ou PNG)
+def get_image_data_uri(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
-            return base64.b64encode(img_file.read()).decode()
-    return ""
+            encoded = base64.b64encode(img_file.read()).decode()
+            if image_path.lower().endswith(".png"):
+                return f"data:image/png;base64,{encoded}"
+            else:
+                return f"data:image/jpeg;base64,{encoded}"
+    else:
+        st.warning(
+            f"⚠️ Ficheiro '{image_path}' não encontrado na pasta principal."
+        )
+        return ""
 
 
-img_base64 = get_base64_image("Tenis1.jpg")
+img_uri = get_image_data_uri("Tenis1.jpg")
 
-# Injeção de CSS e do Fundo via HTML Absoluto para garantir visibilidade total
+# Injeção de CSS Direta no .stApp com prioridade máxima
 st.markdown(
     f"""
     <style>
-    /* Fixa a imagem no fundo de toda a janela com camada escura por cima */
-    .bg-img {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        object-fit: cover;
-        z-index: -99;
-        filter: brightness(0.4);
-    }}
-    
-    .main {{
-        color: #ffffff !important;
+    .stApp {{
+        background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("{img_uri}") !important;
+        background-size: cover !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        background-attachment: fixed !important;
     }}
     
     .stSidebar, [data-testid="stSidebar"] {{
@@ -52,9 +52,8 @@ st.markdown(
         color: #ffffff !important;
     }}
     
-    /* Cartões métricos translúcidos */
     .metric-card {{
-        background-color: rgba(25, 25, 25, 0.80) !important;
+        background-color: rgba(25, 25, 25, 0.85) !important;
         padding: 10px 12px;
         border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.15);
@@ -75,14 +74,11 @@ st.markdown(
         margin-bottom: 0px;
     }}
     
-    /* Transparência nas tabelas */
     [data-testid="stDataFrame"] {{
-        background-color: rgba(25, 25, 25, 0.80) !important;
+        background-color: rgba(25, 25, 25, 0.85) !important;
         backdrop-filter: blur(4px);
     }}
     </style>
-
-    <img class="bg-img" src="data:image/jpeg;base64,{img_base64}">
 """,
     unsafe_allow_html=True,
 )
