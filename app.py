@@ -1,3 +1,4 @@
+from datetime import date
 import os
 import sqlite3
 import numpy as np
@@ -150,9 +151,7 @@ with aba_estatisticas:
                 (df_encontros["jogador_1"] == jogador_selecionado)
                 | (df_encontros["jogador_2"] == jogador_selecionado)
             ]
-            st.markdown(
-                f"### Histórico para: **{jogador_selecionado}**"
-            )
+            st.markdown(f"### Histórico para: **{jogador_selecionado}**")
             st.dataframe(df_jogador, use_container_width=True)
 
             # Filtro por superfície
@@ -182,19 +181,22 @@ with aba_simulador:
 
     col_odds1, col_odds2 = st.columns(2)
     with col_odds1:
-        odd_jog_1 = st.number_input("Odd Jogador 1", min_value=1.01, value=1.85, step=0.01)
+        odd_jog_1 = st.number_input(
+            "Odd Jogador 1", min_value=1.01, value=1.85, step=0.01
+        )
         prob_est_1 = st.slider(
             "Probabilidade Estimada (%) - Jogador 1", 1, 99, 55
         )
 
     with col_odds2:
-        odd_jog_2 = st.number_input("Odd Jogador 2", min_value=1.01, value=2.00, step=0.01)
+        odd_jog_2 = st.number_input(
+            "Odd Jogador 2", min_value=1.01, value=2.00, step=0.01
+        )
         prob_est_2 = 100 - prob_est_1
         st.info(f"Probabilidade Estimada (%) - Jogador 2: {prob_est_2}%")
 
     st.markdown("---")
     if st.button("Calcular Valor de Aposta"):
-        # Cálculo do Valor Esperado (EV = (Probabilidade * Odd) - 1)
         ev_1 = (prob_est_1 / 100.0) * odd_jog_1 - 1
         ev_2 = (prob_est_2 / 100.0) * odd_jog_2 - 1
 
@@ -202,14 +204,18 @@ with aba_simulador:
         with col_res1:
             st.metric("Expected Value (EV) - Jogador 1", f"{ev_1 * 100:.2f}%")
             if ev_1 > 0:
-                st.success("Aposta com Valor Positivo (Value Bet) detetada no Jogador 1!")
+                st.success(
+                    "Aposta com Valor Positivo (Value Bet) detetada no Jogador 1!"
+                )
             else:
                 st.warning("Sem valor estatístico para o Jogador 1.")
 
         with col_res2:
             st.metric("Expected Value (EV) - Jogador 2", f"{ev_2 * 100:.2f}%")
             if ev_2 > 0:
-                st.success("Aposta com Valor Positivo (Value Bet) detetada no Jogador 2!")
+                st.success(
+                    "Aposta com Valor Positivo (Value Bet) detetada no Jogador 2!"
+                )
             else:
                 st.warning("Sem valor estatístico para o Jogador 2.")
 
@@ -222,7 +228,7 @@ with aba_gestao:
     with st.form("form_inserir_encontro"):
         col_f1, col_f2 = st.columns(2)
         with col_f1:
-            data_enc = st.date_input("Data do Encontro", datetime.today())
+            data_enc = st.date_input("Data do Encontro", date.today())
             torneio = st.text_input("Nome do Torneio", "ATP Masters")
             superficie = st.selectbox(
                 "Superfície", ["Hard", "Clay", "Grass", "Carpet"]
@@ -232,7 +238,9 @@ with aba_gestao:
             jogador_2 = st.text_input("Jogador 2", "Carlos Alcaraz")
             odd_1 = st.number_input("Odd Jogador 1", 1.01, 100.0, 1.50)
             odd_2 = st.number_input("Odd Jogador 2", 1.01, 100.0, 2.50)
-            vencedor = st.selectbox("Vencedor", [jogador_1, jogador_2, "Pendente"])
+            vencedor = st.selectbox(
+                "Vencedor", [jogador_1, jogador_2, "Pendente"]
+            )
 
         submit_button = st.form_submit_button(
             label="Guardar Encontro na Base de Dados"
@@ -260,3 +268,4 @@ with aba_gestao:
             conn.commit()
             conn.close()
             st.success("Encontro registado com sucesso na base de dados SQLite!")
+        
