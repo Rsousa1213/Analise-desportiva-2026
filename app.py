@@ -32,7 +32,7 @@ def get_image_data_uri(image_path):
 
 img_uri = get_image_data_uri("Tenis1.jpg")
 
-# Injeção de CSS Direta no .stApp com prioridade máxima
+# Injeção de CSS com remoção da barra branca superior
 st.markdown(
     f"""
     <style>
@@ -42,6 +42,11 @@ st.markdown(
         background-position: center !important;
         background-repeat: no-repeat !important;
         background-attachment: fixed !important;
+    }}
+    
+    /* Torna o cabeçalho superior transparente para se fundir com o fundo */
+    [data-testid="stHeader"] {{
+        background-color: transparent !important;
     }}
     
     .stSidebar, [data-testid="stSidebar"] {{
