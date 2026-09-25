@@ -12,13 +12,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Estilo Visual Profissional com Fundo de Ténis / Estádio e Cartões Compactos
+# Estilo Visual com a tua imagem de fundo exata e cartões compactos
 st.markdown(
     """
     <style>
     .stApp {
-        background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
-                    url('https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?q=80&w=1920&auto=format&fit=crop');
+        background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
+                    url('Tenis1.jpg');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -33,7 +33,7 @@ st.markdown(
         color: #ffffff !important;
     }
     .metric-card {
-        background-color: rgba(30, 30, 30, 0.9) !important;
+        background-color: rgba(30, 30, 30, 0.85) !important;
         padding: 10px 12px;
         border-radius: 6px;
         border: 1px solid #444444;
