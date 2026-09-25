@@ -64,9 +64,3 @@ aplicar_estilo_visual()
 
 # Título Principal
 st.markdown("### 🎾 Analise Ténis 26/27 - Elo por Superfície & Rigor Estatístico")
-
-st.info(
-    "🚧 Esqueleto inicial — falta ligar os dados históricos (tennis-data.co.uk), "
-    "o cálculo de Elo por superfície, os jogos de hoje (ESPN) e o Edge/Kelly. "
-    "Este ficheiro já tem o layout visual pronto, igual em espírito ao main.py do futebol."
-)
