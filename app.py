@@ -22,7 +22,7 @@ def get_base64_image(image_path):
     return ""
 
 
-img_base64 = get_base64_image("tenis1.jpg")
+img_base64 = get_base64_image("Tenis1.jpg")
 
 # Injeção de CSS e do Fundo via HTML Absoluto para garantir visibilidade total
 st.markdown(
