@@ -24,17 +24,20 @@ def get_base64_image(image_path):
 
 img_base64 = get_base64_image("tenis1.jpg")
 
-# Estilo Visual com a imagem de fundo forçada nos seletores do Streamlit
+# Injeção de CSS e do Fundo via HTML Absoluto para garantir visibilidade total
 st.markdown(
     f"""
     <style>
-    /* Força a imagem de fundo em toda a aplicação e remove fundos brancos/cinzentos do Streamlit */
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
-        background: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), 
-                    url('data:image/jpeg;base64,{img_base64}') !important;
-        background-size: cover !important;
-        background-position: center !important;
-        background-attachment: fixed !important;
+    /* Fixa a imagem no fundo de toda a janela com camada escura por cima */
+    .bg-img {{
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+        z-index: -99;
+        filter: brightness(0.4);
     }}
     
     .main {{
@@ -42,16 +45,16 @@ st.markdown(
     }}
     
     .stSidebar, [data-testid="stSidebar"] {{
-        background-color: rgba(18, 18, 18, 0.90) !important;
+        background-color: rgba(18, 18, 18, 0.92) !important;
     }}
     
     h1, h2, h3, h4, h5, h6, p, label, span {{
         color: #ffffff !important;
     }}
     
-    /* Cartões métricos com fundo translúcido para deixar transparecer a imagem */
+    /* Cartões métricos translúcidos */
     .metric-card {{
-        background-color: rgba(20, 20, 20, 0.75) !important;
+        background-color: rgba(25, 25, 25, 0.80) !important;
         padding: 10px 12px;
         border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.15);
@@ -74,10 +77,12 @@ st.markdown(
     
     /* Transparência nas tabelas */
     [data-testid="stDataFrame"] {{
-        background-color: rgba(20, 20, 20, 0.75) !important;
+        background-color: rgba(25, 25, 25, 0.80) !important;
         backdrop-filter: blur(4px);
     }}
     </style>
+
+    <img class="bg-img" src="data:image/jpeg;base64,{img_base64}">
 """,
     unsafe_allow_html=True,
 )
