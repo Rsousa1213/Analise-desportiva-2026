@@ -1,3 +1,4 @@
+import base64
 from datetime import date
 import os
 import sqlite3
@@ -13,7 +14,7 @@ st.set_page_config(
 )
 
 
-# Função para carregar e converter a imagem local em Base64 para o CSS
+# Função para carregar e converter a imagem local em Base64
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -23,37 +24,44 @@ def get_base64_image(image_path):
 
 img_base64 = get_base64_image("tenis1.jpg")
 
-# Estilo Visual com a imagem de fundo em Base64 e cartões compactos
+# Estilo Visual com a imagem de fundo forçada nos seletores do Streamlit
 st.markdown(
     f"""
     <style>
-    .stApp {{
-        background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
-                    url('data:image/jpeg;base64,{img_base64}');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
+    /* Força a imagem de fundo em toda a aplicação e remove fundos brancos/cinzentos do Streamlit */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+        background: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), 
+                    url('data:image/jpeg;base64,{img_base64}') !important;
+        background-size: cover !important;
+        background-position: center !important;
+        background-attachment: fixed !important;
     }}
+    
     .main {{
         color: #ffffff !important;
     }}
-    .stSidebar {{
-        background-color: rgba(20, 20, 20, 0.95) !important;
+    
+    .stSidebar, [data-testid="stSidebar"] {{
+        background-color: rgba(18, 18, 18, 0.90) !important;
     }}
+    
     h1, h2, h3, h4, h5, h6, p, label, span {{
         color: #ffffff !important;
     }}
+    
+    /* Cartões métricos com fundo translúcido para deixar transparecer a imagem */
     .metric-card {{
-        background-color: rgba(30, 30, 30, 0.85) !important;
+        background-color: rgba(20, 20, 20, 0.75) !important;
         padding: 10px 12px;
         border-radius: 6px;
-        border: 1px solid #444444;
+        border: 1px solid rgba(255, 255, 255, 0.15);
         text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.4);
         margin-bottom: 10px;
+        backdrop-filter: blur(4px);
     }}
     .metric-card h4 {{
-        color: #aaaaaa !important;
+        color: #dddddd !important;
         font-size: 12px;
         margin-bottom: 2px;
     }}
@@ -63,8 +71,11 @@ st.markdown(
         margin-top: 0px;
         margin-bottom: 0px;
     }}
-    dataframe, .stDataFrame {{
-        background-color: rgba(20, 20, 20, 0.85) !important;
+    
+    /* Transparência nas tabelas */
+    [data-testid="stDataFrame"] {{
+        background-color: rgba(20, 20, 20, 0.75) !important;
+        backdrop-filter: blur(4px);
     }}
     </style>
 """,
