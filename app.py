@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Estilo Visual Profissional com Fundo de Ténis / Estádio e Alta Legibilidade
+# Estilo Visual Profissional com Fundo de Ténis / Estádio e Cartões Compactos
 st.markdown(
     """
     <style>
@@ -34,23 +34,24 @@ st.markdown(
     }
     .metric-card {
         background-color: rgba(30, 30, 30, 0.9) !important;
-        padding: 18px;
-        border-radius: 8px;
+        padding: 10px 12px;
+        border-radius: 6px;
         border: 1px solid #444444;
         text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        margin-bottom: 10px;
     }
     .metric-card h4 {
         color: #aaaaaa !important;
-        font-size: 14px;
-        margin-bottom: 5px;
+        font-size: 12px;
+        margin-bottom: 2px;
     }
     .metric-card h2 {
         color: #ffffff !important;
-        font-size: 24px;
+        font-size: 18px;
         margin-top: 0px;
+        margin-bottom: 0px;
     }
-    /* Estilo para as tabelas para garantir contraste perfeito */
     dataframe, .stDataFrame {
         background-color: rgba(20, 20, 20, 0.85) !important;
     }
@@ -181,12 +182,12 @@ with aba_analise:
         )
     with m7:
         st.markdown(
-            '<div class="metric-card"><h4>Break Points Convertidos</h4><h2>42.1%</h2></div>',
+            '<div class="metric-card"><h4>Break Points Conv.</h4><h2>42.1%</h2></div>',
             unsafe_allow_html=True,
         )
     with m8:
         st.markdown(
-            '<div class="metric-card"><h4>Eficiência em Terra/Hard</h4><h2>78% / 82%</h2></div>',
+            '<div class="metric-card"><h4>Eficiência Terra/Hard</h4><h2>78% / 82%</h2></div>',
             unsafe_allow_html=True,
         )
 
