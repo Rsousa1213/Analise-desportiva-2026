@@ -44,7 +44,7 @@ st.markdown(
         background-attachment: fixed !important;
     }}
     
-    /* Torna o cabeçalho superior transparente para se fundir com o fundo da relva */
+    /* Torna o cabeçalho superior transparente para se fundir com o fundo */
     [data-testid="stHeader"] {{
         background-color: transparent !important;
     }}
@@ -123,37 +123,66 @@ def init_db():
     """
     )
 
-    # Inserir lista alargada de tenistas de topo (ATP e WTA) se a tabela estiver vazia
+    # Inserir os 50 melhores jogadores (Singles e Doubles) se a tabela estiver vazia
     cursor.execute("SELECT COUNT(*) FROM atletas")
     if cursor.fetchone()[0] == 0:
         atletas_iniciais = [
-            # ATP Top / Principais
+            # ==========================================
+            # ATP SINGLES (Top 25)
+            # ==========================================
             ("Jannik Sinner", 87.5, 9.8, 1.8, 44.2, 85.0),
             ("Carlos Alcaraz", 85.2, 7.5, 2.4, 43.0, 83.5),
-            ("Novak Djokovic", 88.0, 6.8, 1.5, 45.5, 88.0),
             ("Alexander Zverev", 89.1, 11.2, 2.1, 38.0, 81.0),
+            ("Novak Djokovic", 88.0, 6.8, 1.5, 45.5, 88.0),
             ("Daniil Medvedev", 83.4, 6.2, 2.8, 41.5, 84.0),
             ("Taylor Fritz", 89.5, 13.5, 1.9, 36.2, 82.0),
             ("Casper Ruud", 84.0, 5.5, 2.2, 39.8, 77.0),
             ("Andrey Rublev", 85.6, 9.1, 2.5, 40.1, 80.5),
+            ("Alex de Minaur", 80.5, 4.2, 1.6, 43.5, 81.0),
             ("Stefanos Tsitsipas", 86.2, 8.9, 2.3, 38.5, 79.0),
             ("Hubert Hurkacz", 91.0, 15.2, 1.7, 34.0, 83.0),
-            ("Alex de Minaur", 80.5, 4.2, 1.6, 43.5, 81.0),
+            ("Tommy Paul", 82.1, 6.1, 1.8, 42.0, 79.5),
             ("Grigor Dimitrov", 84.8, 8.4, 2.0, 41.0, 82.5),
             ("Ben Shelton", 88.2, 14.8, 3.1, 35.5, 80.0),
-            ("Tommy Paul", 82.1, 6.1, 1.8, 42.0, 79.5),
+            ("Ugo Humbert", 83.0, 10.1, 2.4, 39.5, 79.0),
+            ("Holger Rune", 82.5, 7.9, 2.9, 40.0, 78.5),
             ("Frances Tiafoe", 81.5, 8.2, 2.6, 39.0, 78.0),
-            # WTA Top / Principais
-            ("Iga Swiatek", 78.5, 3.2, 2.1, 51.0, 89.0),
-            ("Aryna Sabalenka", 77.0, 7.8, 3.5, 47.5, 86.0),
-            ("Coco Gauff", 74.5, 4.1, 3.8, 48.0, 84.5),
-            ("Elena Rybakina", 80.2, 8.5, 2.2, 45.0, 85.5),
-            ("Jessica Pegula", 75.0, 3.5, 1.9, 46.5, 83.0),
-            ("Jasmine Paolini", 72.0, 2.1, 2.0, 49.0, 78.0),
-            ("Zheng Qinwen", 76.5, 7.2, 3.1, 44.0, 81.0),
-            ("Barbora Krejcikova", 73.5, 4.0, 2.4, 46.0, 79.0),
-            ("Maria Sakkari", 74.0, 5.2, 2.5, 43.5, 80.0),
-            ("Ons Jabeur", 73.0, 4.5, 2.7, 47.0, 80.5),
+            ("Karen Khachanov", 84.5, 9.5, 2.2, 37.5, 80.0),
+            ("Alejandro Tabilo", 81.0, 8.0, 2.1, 38.0, 76.0),
+            ("Sebastian Baez", 76.0, 3.1, 2.3, 45.0, 72.0),
+            ("Arthur Fils", 83.5, 9.0, 2.7, 38.5, 79.0),
+            ("Lorenzo Musetti", 79.0, 5.0, 2.4, 42.0, 75.0),
+            ("Jack Draper", 85.0, 11.0, 2.0, 40.5, 82.0),
+            ("Felix Auger-Aliassime", 86.5, 12.5, 2.5, 36.0, 81.0),
+            ("Jordan Thompson", 81.2, 6.5, 1.8, 41.0, 78.5),
+            # ==========================================
+            # ATP DOUBLES (Top 25 Pares / Especialistas)
+            # ==========================================
+            ("Marcel Granollers", 90.0, 4.0, 1.2, 48.0, 85.0),
+            ("Horacio Zeballos", 89.5, 4.2, 1.3, 47.5, 84.5),
+            ("Matthew Ebden", 90.5, 6.5, 1.4, 46.0, 86.0),
+            ("Rohan Bopanna", 91.2, 8.2, 1.1, 45.0, 87.0),
+            ("Joe Salisbury", 89.0, 5.5, 1.5, 46.5, 84.0),
+            ("Rajeev Ram", 88.8, 5.0, 1.4, 47.0, 85.0),
+            ("Marcelo Arevalo", 89.2, 6.0, 1.3, 46.0, 85.5),
+            ("Mate Pavic", 89.8, 7.1, 1.2, 45.5, 86.0),
+            ("Wesley Koolhof", 88.5, 5.8, 1.5, 46.0, 84.0),
+            ("Nikola Mektic", 88.2, 6.2, 1.6, 45.0, 83.5),
+            ("Kevin Krawietz", 87.9, 7.5, 1.4, 44.5, 83.0),
+            ("Tim Puetz", 87.5, 7.0, 1.5, 44.0, 83.0),
+            ("Max Purcell", 88.0, 8.0, 1.6, 45.0, 84.0),
+            ("Jordan Thompson (Par)", 88.0, 7.8, 1.5, 44.5, 83.5),
+            ("Andrea Vavassori", 86.5, 6.0, 1.7, 43.5, 82.0),
+            ("Simone Bolelli", 87.0, 6.5, 1.6, 44.0, 82.5),
+            ("Harri Heliovaara", 87.5, 7.2, 1.4, 43.0, 83.0),
+            ("Henry Patten", 87.2, 7.4, 1.5, 43.5, 83.0),
+            ("Michael Venus", 86.8, 6.1, 1.7, 42.5, 81.5),
+            ("Neal Skupski", 88.1, 6.8, 1.4, 45.0, 84.0),
+            ("Austin Krajicek", 87.8, 7.0, 1.5, 44.0, 83.5),
+            ("Jean-Julien Rojer", 86.0, 5.2, 1.8, 42.0, 81.0),
+            ("Santiago Gonzalez", 85.8, 4.9, 1.8, 42.5, 80.5),
+            ("Edouard Roger-Vasselin", 87.0, 5.5, 1.5, 44.0, 82.5),
+            ("Nathaniel Lammons", 86.2, 6.5, 1.6, 43.0, 82.0),
         ]
         cursor.executemany(
             "INSERT OR IGNORE INTO atletas VALUES (?, ?, ?, ?, ?, ?)",
@@ -185,7 +214,6 @@ def get_atleta_stats(nome):
             "hard": res[4],
         }
     else:
-        # Valores padrão predefinidos caso o tenista não esteja na lista inicial
         return {
             "hold": 80.0,
             "ases": 7.0,
@@ -201,7 +229,7 @@ def get_atleta_stats(nome):
 with st.sidebar:
     st.markdown("### Selecione o Torneio / Competição:")
     torneio_sel = st.selectbox(
-        "", ["ATP Masters / Grand Slam", "WTA Tour", "Challenger Tour"]
+        "", ["ATP Singles", "ATP Doubles", "Challenger Tour"]
     )
 
     st.markdown("---")
@@ -280,12 +308,12 @@ with aba_analise:
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(
-            f'<div class="metric-card"><h4>Hold Serviço ({jogador_casa.split()[-1]})</h4><h2>{stats_a["hold"]}%</h2></div>',
+            f'<div class="metric-card"><h4>Hold Serviço (Atleta A)</h4><h2>{stats_a["hold"]}%</h2></div>',
             unsafe_allow_html=True,
         )
     with m2:
         st.markdown(
-            f'<div class="metric-card"><h4>Hold Serviço ({jogador_fora.split()[-1]})</h4><h2>{stats_b["hold"]}%</h2></div>',
+            f'<div class="metric-card"><h4>Hold Serviço (Atleta B)</h4><h2>{stats_b["hold"]}%</h2></div>',
             unsafe_allow_html=True,
         )
     with m3:
@@ -440,7 +468,7 @@ with aba_historico:
     with col_reg2:
         with st.form("form_novo_atleta"):
             st.markdown("### Adicionar / Atualizar Atleta na Base de Dados")
-            novo_nome = st.text_input("Nome do Tenista (ex: Holger Rune)")
+            novo_nome = st.text_input("Nome do Tenista")
             n_hold = st.slider("Hold de Serviço (%)", 50.0, 99.0, 85.0)
             n_ases = st.number_input("Média de Ases por Jogo", 0.0, 30.0, 7.5)
             n_df = st.number_input("Média de Duplas Faltas", 0.0, 10.0, 2.0)
