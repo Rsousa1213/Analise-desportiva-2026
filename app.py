@@ -12,23 +12,47 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Estilo Visual Dark / Profissional inspirado na tua app de futebol
+# Estilo Visual Profissional com Fundo de Ténis / Estádio e Alta Legibilidade
 st.markdown(
     """
     <style>
+    .stApp {
+        background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
+                    url('https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?q=80&w=1920&auto=format&fit=crop');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
     .main {
-        background-color: #121212;
-        color: #ffffff;
+        color: #ffffff !important;
     }
     .stSidebar {
-        background-color: #1e1e1e;
+        background-color: rgba(20, 20, 20, 0.95) !important;
+    }
+    h1, h2, h3, h4, h5, h6, p, label, span {
+        color: #ffffff !important;
     }
     .metric-card {
-        background-color: #1e1e1e;
-        padding: 15px;
+        background-color: rgba(30, 30, 30, 0.9) !important;
+        padding: 18px;
         border-radius: 8px;
-        border: 1px solid #333333;
+        border: 1px solid #444444;
         text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    .metric-card h4 {
+        color: #aaaaaa !important;
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+    .metric-card h2 {
+        color: #ffffff !important;
+        font-size: 24px;
+        margin-top: 0px;
+    }
+    /* Estilo para as tabelas para garantir contraste perfeito */
+    dataframe, .stDataFrame {
+        background-color: rgba(20, 20, 20, 0.85) !important;
     }
     </style>
 """,
@@ -67,7 +91,7 @@ init_db()
 # BARRA LATERAL (Gestão de Banca e Torneios)
 # ==========================================
 with st.sidebar:
-    st.subheader("Selecione o Torneio / Competição:")
+    st.markdown("### Selecione o Torneio / Competição:")
     torneio_sel = st.selectbox(
         "", ["ATP Masters / Grand Slam", "WTA Tour", "Challenger Tour"]
     )
@@ -80,7 +104,7 @@ with st.sidebar:
     stake_max = st.slider("Stake Máxima Base (%)", 0.5, 10.0, 5.0)
 
     st.markdown("---")
-    st.subheader("Inserção Manual de Odds")
+    st.markdown("### Inserção Manual de Odds")
     casa_apostas = st.text_input("Casa de Apostas", "Betclic / PinUp")
     odd_over_jogos = st.number_input("Odd Over Jogos (ex: 21.5)", 1.01, 10.0, 1.85)
     odd_under_jogos = st.number_input("Odd Under Jogos", 1.01, 10.0, 1.90)
@@ -91,7 +115,7 @@ with st.sidebar:
 # CABEÇALHO E ABAS PRINCIPAIS
 # ==========================================
 st.markdown(
-    "### 🎾 Análise 26/27 - Rigor Estatístico & Inteligência Avançada"
+    "## 🎾 Análise 26/27 - Rigor Estatístico & Inteligência Avançada"
 )
 
 aba_analise, aba_historico = st.tabs(
@@ -167,7 +191,7 @@ with aba_analise:
         )
 
     st.markdown("---")
-    st.subheader("💡 Tabela Consolidada de Mercados (Ténis)")
+    st.markdown("### 💡 Tabela Consolidada de Mercados (Ténis)")
 
     # Simulação da Tabela Consolidada
     dados_tabela = [
@@ -228,7 +252,7 @@ with aba_analise:
 # ABA 2: HISTÓRICO & DESEMPENHO
 # ==========================================
 with aba_historico:
-    st.subheader("Registo e Histórico de Confrontos Diretos")
+    st.markdown("### Registo e Histórico de Confrontos Diretos")
 
     conn = sqlite3.connect(DB_NAME)
     df_encontros = pd.read_sql_query("SELECT * FROM encontros", conn)
@@ -238,11 +262,11 @@ with aba_historico:
         st.dataframe(df_encontros, use_container_width=True)
     else:
         st.info(
-            "Ainda não existem encontros gravados. Utilize o painel para adicionar ou simular dados."
+            "Ainda não existem encontros gravados. Utilize o formulário abaixo para adicionar dados."
         )
 
     with st.form("form_novo_jogo_tenis"):
-        st.subheader("Adicionar Novo Encontro à Base de Dados")
+        st.markdown("### Adicionar Novo Encontro à Base de Dados")
         col_f1, col_f2 = st.columns(2)
         with col_f1:
             data_reg = st.date_input("Data", date.today())
@@ -280,4 +304,3 @@ with aba_historico:
             conn.commit()
             conn.close()
             st.success("Encontro de ténis guardado com sucesso!")
-            
