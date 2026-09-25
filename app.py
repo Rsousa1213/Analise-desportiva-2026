@@ -12,27 +12,38 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Estilo Visual com a tua imagem de fundo exata e cartões compactos
+
+# Função para carregar e converter a imagem local em Base64 para o CSS
+def get_base64_image(image_path):
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    return ""
+
+
+img_base64 = get_base64_image("tenis1.jpg")
+
+# Estilo Visual com a imagem de fundo em Base64 e cartões compactos
 st.markdown(
-    """
+    f"""
     <style>
-    .stApp {
+    .stApp {{
         background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
-                    url('Tenis1.jpg');
+                    url('data:image/jpeg;base64,{img_base64}');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
-    }
-    .main {
+    }}
+    .main {{
         color: #ffffff !important;
-    }
-    .stSidebar {
+    }}
+    .stSidebar {{
         background-color: rgba(20, 20, 20, 0.95) !important;
-    }
-    h1, h2, h3, h4, h5, h6, p, label, span {
+    }}
+    h1, h2, h3, h4, h5, h6, p, label, span {{
         color: #ffffff !important;
-    }
-    .metric-card {
+    }}
+    .metric-card {{
         background-color: rgba(30, 30, 30, 0.85) !important;
         padding: 10px 12px;
         border-radius: 6px;
@@ -40,21 +51,21 @@ st.markdown(
         text-align: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         margin-bottom: 10px;
-    }
-    .metric-card h4 {
+    }}
+    .metric-card h4 {{
         color: #aaaaaa !important;
         font-size: 12px;
         margin-bottom: 2px;
-    }
-    .metric-card h2 {
+    }}
+    .metric-card h2 {{
         color: #ffffff !important;
         font-size: 18px;
         margin-top: 0px;
         margin-bottom: 0px;
-    }
-    dataframe, .stDataFrame {
+    }}
+    dataframe, .stDataFrame {{
         background-color: rgba(20, 20, 20, 0.85) !important;
-    }
+    }}
     </style>
 """,
     unsafe_allow_html=True,
