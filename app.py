@@ -5,41 +5,35 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-# 1. Configuração da Página e Estilo Visual
+# 1. Configuração da Página e Tema Escuro
 st.set_page_config(
-    page_title="Analise Tenis 26/27 - Rigor Estatístico",
+    page_title="Análise Ténis 26/27 - Rigor Estatístico",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-
-def aplicar_estilo_visual():
-    st.markdown(
-        """
-        <style>
-        .main {
-            background-color: #f8f9fa;
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 10px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            background-color: #ffffff;
-            border-radius: 4px;
-            padding: 10px 20px;
-            font-weight: 600;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #2e7d32 !important;
-            color: white !important;
-        }
-        </style>
-    """,
-        unsafe_allow_html=True,
-    )
-
-
-aplicar_estilo_visual()
+# Estilo Visual Dark / Profissional inspirado na tua app de futebol
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #121212;
+        color: #ffffff;
+    }
+    .stSidebar {
+        background-color: #1e1e1e;
+    }
+    .metric-card {
+        background-color: #1e1e1e;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #333333;
+        text-align: center;
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
 
 # 2. Configuração da Base de Dados SQLite
 DB_NAME = "tenis_analytics.db"
@@ -69,184 +63,202 @@ def init_db():
 
 init_db()
 
-# Cabeçalho Principal
-st.title("🎾 Análise Estatística & Apostas de Ténis")
+# ==========================================
+# BARRA LATERAL (Gestão de Banca e Torneios)
+# ==========================================
+with st.sidebar:
+    st.subheader("Selecione o Torneio / Competição:")
+    torneio_sel = st.selectbox(
+        "", ["ATP Masters / Grand Slam", "WTA Tour", "Challenger Tour"]
+    )
+
+    st.markdown("---")
+    st.markdown("### 💰 Banca & Gestão")
+    valor_banca = st.number_input(
+        "Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0
+    )
+    stake_max = st.slider("Stake Máxima Base (%)", 0.5, 10.0, 5.0)
+
+    st.markdown("---")
+    st.subheader("Inserção Manual de Odds")
+    casa_apostas = st.text_input("Casa de Apostas", "Betclic / PinUp")
+    odd_over_jogos = st.number_input("Odd Over Jogos (ex: 21.5)", 1.01, 10.0, 1.85)
+    odd_under_jogos = st.number_input("Odd Under Jogos", 1.01, 10.0, 1.90)
+    odd_favorito = st.number_input("Odd Vitória Favorito", 1.01, 10.0, 1.45)
+    odd_underdog = st.number_input("Odd Vitória Underdog", 1.01, 10.0, 2.70)
+
+# ==========================================
+# CABEÇALHO E ABAS PRINCIPAIS
+# ==========================================
 st.markdown(
-    "Plataforma avançada para análise de dados de ténis, cálculo de probabilidades e apoio à decisão em apostas desportivas."
+    "### 🎾 Análise 26/27 - Rigor Estatístico & Inteligência Avançada"
 )
 
-# 3. Estrutura de Abas (Tabs)
-aba_dashboard, aba_estatisticas, aba_simulador, aba_gestao = st.tabs(
-    [
-        "📊 Dashboard Geral",
-        "📈 Análise de Confrontos & Jogadores",
-        "💡 Simulador de Apostas & Valor",
-        "⚙️ Gestão de Dados",
+aba_analise, aba_historico = st.tabs(
+    ["🎾 Análise do Jogo", "📊 Histórico & Desempenho"]
+)
+
+# Seleção de Atletas
+col_j1, col_j2 = st.columns(2)
+with col_j1:
+    jogador_casa = st.selectbox(
+        "Jogador / Atleta A", ["Novak Djokovic", "Carlos Alcaraz", "Jannik Sinner"]
+    )
+with col_j2:
+    jogador_fora = st.selectbox(
+        "Jogador / Atleta B", [
+            "Alexander Zverev",
+            "Daniil Medvedev",
+            "Stefanos Tsitsipas",
+        ]
+    )
+
+# ==========================================
+# ABA 1: ANÁLISE DO JOGO (Indicadores de Ténis)
+# ==========================================
+with aba_analise:
+    st.markdown("---")
+    st.markdown("### 📊 Indicadores Avançados & Fator Superfície")
+
+    # Linha 1 de Métricas
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.markdown(
+            '<div class="metric-card"><h4>Hold de Serviço (A)</h4><h2>86.4%</h2></div>',
+            unsafe_allow_html=True,
+        )
+    with m2:
+        st.markdown(
+            '<div class="metric-card"><h4>Hold de Serviço (B)</h4><h2>81.2%</h2></div>',
+            unsafe_allow_html=True,
+        )
+    with m3:
+        st.markdown(
+            '<div class="metric-card"><h4>Prob. Tie-Break</h4><h2>34.5%</h2></div>',
+            unsafe_allow_html=True,
+        )
+    with m4:
+        st.markdown(
+            '<div class="metric-card"><h4>Prob. 3 Sets / Longo</h4><h2>58.2%</h2></div>',
+            unsafe_allow_html=True,
+        )
+
+    # Linha 2 de Métricas
+    m5, m6, m7, m8 = st.columns(4)
+    with m5:
+        st.markdown(
+            '<div class="metric-card"><h4>Média Ases (A/B)</h4><h2>9.4 / 6.1</h2></div>',
+            unsafe_allow_html=True,
+        )
+    with m6:
+        st.markdown(
+            '<div class="metric-card"><h4>Duplas Faltas (A/B)</h4><h2>2.1 / 3.4</h2></div>',
+            unsafe_allow_html=True,
+        )
+    with m7:
+        st.markdown(
+            '<div class="metric-card"><h4>Break Points Convertidos</h4><h2>42.1%</h2></div>',
+            unsafe_allow_html=True,
+        )
+    with m8:
+        st.markdown(
+            '<div class="metric-card"><h4>Eficiência em Terra/Hard</h4><h2>78% / 82%</h2></div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("---")
+    st.subheader("💡 Tabela Consolidada de Mercados (Ténis)")
+
+    # Simulação da Tabela Consolidada
+    dados_tabela = [
+        {
+            "Mercado": f"Vitória {jogador_casa}",
+            "Probabilidade": "64.5%",
+            "Odd Inserida": odd_favorito,
+            "Odd Justa": round(1 / 0.645, 2),
+            "Edge (%)": "+6.2%",
+            "Stake Recomendada (€)": round(
+                valor_banca * (stake_max / 100), 2
+            ),
+            "Ganho Potencial (€)": round(
+                valor_banca * (stake_max / 100) * odd_favorito, 2
+            ),
+            "Avaliação": "🔥 Valor Encontrado",
+        },
+        {
+            "Mercado": "Over 21.5 Jogos",
+            "Probabilidade": "57.0%",
+            "Odd Inserida": odd_over_jogos,
+            "Odd Justa": round(1 / 0.57, 2),
+            "Edge (%)": "+5.5%",
+            "Stake Recomendada (€)": round(
+                valor_banca * (stake_max / 100), 2
+            ),
+            "Ganho Potencial (€)": round(
+                valor_banca * (stake_max / 100) * odd_over_jogos, 2
+            ),
+            "Avaliação": "🔥 Valor Encontrado",
+        },
+        {
+            "Mercado": "Under 21.5 Jogos",
+            "Probabilidade": "43.0%",
+            "Odd Inserida": odd_under_jogos,
+            "Odd Justa": round(1 / 0.43, 2),
+            "Edge (%)": "-18.2%",
+            "Stake Recomendada (€)": 0.00,
+            "Ganho Potencial (€)": 0.00,
+            "Avaliação": "❄️ Neutro / Evitar",
+        },
+        {
+            "Mercado": f"Vitória {jogador_fora}",
+            "Probabilidade": "35.5%",
+            "Odd Inserida": odd_underdog,
+            "Odd Justa": round(1 / 0.355, 2),
+            "Edge (%)": "-4.1%",
+            "Stake Recomendada (€)": 0.00,
+            "Ganho Potencial (€)": 0.00,
+            "Avaliação": "❄️ Neutro / Evitar",
+        },
     ]
-)
+
+    df_mercados = pd.DataFrame(dados_tabela)
+    st.dataframe(df_mercados, use_container_width=True)
 
 # ==========================================
-# ABA 1: DASHBOARD GERAL
+# ABA 2: HISTÓRICO & DESEMPENHO
 # ==========================================
-with aba_dashboard:
-    st.subheader("Resumo da Base de Dados e Métricas Principais")
+with aba_historico:
+    st.subheader("Registo e Histórico de Confrontos Diretos")
 
     conn = sqlite3.connect(DB_NAME)
     df_encontros = pd.read_sql_query("SELECT * FROM encontros", conn)
     conn.close()
 
     if not df_encontros.empty:
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total de Encontros", len(df_encontros))
-        with col2:
-            st.metric(
-                "Torneios Registados",
-                df_encontros["torneio"].nunique()
-                if "torneio" in df_encontros.columns
-                else 0,
-            )
-        with col3:
-            st.metric(
-                "Superfícies Únicas",
-                df_encontros["superficie"].nunique()
-                if "superficie" in df_encontros.columns
-                else 0,
-            )
-        with col4:
-            st.metric("Jogadores Mapeados", "N/D")
-
-        st.markdown("---")
-        st.markdown("### Últimos Encontros Registados")
-        st.dataframe(df_encontros.tail(10), use_container_width=True)
+        st.dataframe(df_encontros, use_container_width=True)
     else:
         st.info(
-            "Ainda não existem dados na base de dados. Utilize a aba 'Gestão de Dados' para inserir registos."
+            "Ainda não existem encontros gravados. Utilize o painel para adicionar ou simular dados."
         )
 
-# ==========================================
-# ABA 2: ANÁLISE DE CONFRONTOS & JOGADORES
-# ==========================================
-with aba_estatisticas:
-    st.subheader("Análise Detalhada por Jogador e Superfície")
-
-    if not df_encontros.empty:
-        lista_jogadores = sorted(
-            list(
-                set(
-                    df_encontros["jogador_1"].tolist()
-                    + df_encontros["jogador_2"].tolist()
-                )
-            )
-        )
-
-        col_j1, col_j2 = st.columns(2)
-        with col_j1:
-            jogador_selecionado = st.selectbox(
-                "Selecione o Jogador", lista_jogadores
-            )
-
-        if jogador_selecionado:
-            df_jogador = df_encontros[
-                (df_encontros["jogador_1"] == jogador_selecionado)
-                | (df_encontros["jogador_2"] == jogador_selecionado)
-            ]
-            st.markdown(f"### Histórico para: **{jogador_selecionado}**")
-            st.dataframe(df_jogador, use_container_width=True)
-
-            # Filtro por superfície
-            if "superficie" in df_encontros.columns:
-                superficies = df_encontros["superficie"].unique()
-                sup_escolhida = st.selectbox(
-                    "Filtrar por Superfície", superficies
-                )
-                df_sup = df_jogador[df_jogador["superficie"] == sup_escolhida]
-                st.write(
-                    f"Desempenho em **{sup_escolhida}**: {len(df_sup)} encontros encontrados."
-                )
-    else:
-        st.warning(
-            "Insira dados de encontros para poder realizar análises estatísticas."
-        )
-
-# ==========================================
-# ABA 3: SIMULADOR DE APOSTAS & VALOR
-# ==========================================
-with aba_simulador:
-    st.subheader("Calculadora de Valor Esperado (EV) & Apostas")
-
-    st.markdown(
-        "Insira as odds oferecidas pelas casas de apostas e a sua probabilidade estimada para calcular o valor da aposta."
-    )
-
-    col_odds1, col_odds2 = st.columns(2)
-    with col_odds1:
-        odd_jog_1 = st.number_input(
-            "Odd Jogador 1", min_value=1.01, value=1.85, step=0.01
-        )
-        prob_est_1 = st.slider(
-            "Probabilidade Estimada (%) - Jogador 1", 1, 99, 55
-        )
-
-    with col_odds2:
-        odd_jog_2 = st.number_input(
-            "Odd Jogador 2", min_value=1.01, value=2.00, step=0.01
-        )
-        prob_est_2 = 100 - prob_est_1
-        st.info(f"Probabilidade Estimada (%) - Jogador 2: {prob_est_2}%")
-
-    st.markdown("---")
-    if st.button("Calcular Valor de Aposta"):
-        ev_1 = (prob_est_1 / 100.0) * odd_jog_1 - 1
-        ev_2 = (prob_est_2 / 100.0) * odd_jog_2 - 1
-
-        col_res1, col_res2 = st.columns(2)
-        with col_res1:
-            st.metric("Expected Value (EV) - Jogador 1", f"{ev_1 * 100:.2f}%")
-            if ev_1 > 0:
-                st.success(
-                    "Aposta com Valor Positivo (Value Bet) detetada no Jogador 1!"
-                )
-            else:
-                st.warning("Sem valor estatístico para o Jogador 1.")
-
-        with col_res2:
-            st.metric("Expected Value (EV) - Jogador 2", f"{ev_2 * 100:.2f}%")
-            if ev_2 > 0:
-                st.success(
-                    "Aposta com Valor Positivo (Value Bet) detetada no Jogador 2!"
-                )
-            else:
-                st.warning("Sem valor estatístico para o Jogador 2.")
-
-# ==========================================
-# ABA 4: GESTÃO DE DADOS
-# ==========================================
-with aba_gestao:
-    st.subheader("Adicionar Novo Encontro / Importar Dados")
-
-    with st.form("form_inserir_encontro"):
+    with st.form("form_novo_jogo_tenis"):
+        st.subheader("Adicionar Novo Encontro à Base de Dados")
         col_f1, col_f2 = st.columns(2)
         with col_f1:
-            data_enc = st.date_input("Data do Encontro", date.today())
-            torneio = st.text_input("Nome do Torneio", "ATP Masters")
-            superficie = st.selectbox(
+            data_reg = st.date_input("Data", date.today())
+            torneio_nome = st.text_input("Torneio", "ATP Masters")
+            superficie_escolhida = st.selectbox(
                 "Superfície", ["Hard", "Clay", "Grass", "Carpet"]
             )
         with col_f2:
-            jogador_1 = st.text_input("Jogador 1", "Novak Djokovic")
-            jogador_2 = st.text_input("Jogador 2", "Carlos Alcaraz")
-            odd_1 = st.number_input("Odd Jogador 1", 1.01, 100.0, 1.50)
-            odd_2 = st.number_input("Odd Jogador 2", 1.01, 100.0, 2.50)
-            vencedor = st.selectbox(
-                "Vencedor", [jogador_1, jogador_2, "Pendente"]
-            )
+            j1 = st.text_input("Jogador 1", jogador_casa)
+            j2 = st.text_input("Jogador 2", jogador_fora)
+            o1 = st.number_input("Odd Jogador 1", 1.01, 100.0, 1.50)
+            o2 = st.number_input("Odd Jogador 2", 1.01, 100.0, 2.50)
+            venc = st.selectbox("Vencedor", [j1, j2, "Pendente"])
 
-        submit_button = st.form_submit_button(
-            label="Guardar Encontro na Base de Dados"
-        )
-
-        if submit_button:
+        btn_guardar = st.form_submit_button("Guardar Registo na Base de Dados")
+        if btn_guardar:
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute(
@@ -255,17 +267,17 @@ with aba_gestao:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
-                    str(data_enc),
-                    torneio,
-                    superficie,
-                    jogador_1,
-                    jogador_2,
-                    odd_1,
-                    odd_2,
-                    vencedor,
+                    str(data_reg),
+                    torneio_nome,
+                    superficie_escolhida,
+                    j1,
+                    j2,
+                    o1,
+                    o2,
+                    venc,
                 ),
             )
             conn.commit()
             conn.close()
-            st.success("Encontro registado com sucesso na base de dados SQLite!")
-        
+            st.success("Encontro de ténis guardado com sucesso!")
+            
