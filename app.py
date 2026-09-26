@@ -296,41 +296,8 @@ def get_atleta_stats(nome):
 
 
 # ==========================================
-# BARRA LATERAL (Gestão de Banca e Torneios)
+# SELEÇÃO DE JOGADORES (feita primeiro, para a sidebar poder usar os nomes)
 # ==========================================
-with st.sidebar:
-    st.markdown("### Selecione o Torneio / Competição:")
-    torneio_sel = st.selectbox(
-        "", ["ATP Singles", "ATP Doubles", "Challenger Tour"]
-    )
-
-    st.markdown("---")
-    st.markdown("### 💰 Banca & Gestão")
-    valor_banca = st.number_input(
-        "Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0
-    )
-    stake_max = st.slider("Stake Máxima Base (%)", 0.5, 10.0, 5.0)
-
-    st.markdown("---")
-    st.markdown("### Inserção Manual de Odds")
-    casa_apostas = st.text_input("Casa de Apostas", "Betclic / PinUp")
-    odd_over_jogos = st.number_input("Odd Over Jogos (ex: 21.5)", 1.01, 10.0, 1.85)
-    odd_under_jogos = st.number_input("Odd Under Jogos", 1.01, 10.0, 1.90)
-    odd_favorito = st.number_input("Odd Vitória Favorito", 1.01, 10.0, 1.45)
-    odd_underdog = st.number_input("Odd Vitória Underdog", 1.01, 10.0, 2.70)
-
-# ==========================================
-# CABEÇALHO E ABAS PRINCIPAIS
-# ==========================================
-st.markdown(
-    "## 🎾 Análise 26/27 - Rigor Estatístico & Inteligência Avançada"
-)
-
-aba_analise, aba_historico = st.tabs(
-    ["🎾 Análise do Jogo", "📊 Histórico & Desempenho"]
-)
-
-# Obter a lista completa de atletas diretamente da base de dados
 conn = sqlite3.connect(DB_NAME)
 df_atletas_db = pd.read_sql_query(
     "SELECT nome FROM atletas ORDER BY nome ASC", conn
@@ -340,7 +307,6 @@ lista_tenistas = df_atletas_db["nome"].tolist()
 
 st.caption(f"📋 {len(lista_tenistas)} jogadores disponíveis na lista.")
 
-# Seleção de Atletas com lista completa integrada
 col_j1, col_j2 = st.columns(2)
 with col_j1:
     jogador_casa = st.selectbox(
@@ -365,9 +331,53 @@ with col_j2:
         key="sel_j2",
     )
 
-# Buscar estatísticas automáticas dos atletas escolhidos
 stats_a = get_atleta_stats(jogador_casa)
 stats_b = get_atleta_stats(jogador_fora)
+
+# ==========================================
+# BARRA LATERAL (Gestão de Banca e Torneios)
+# ==========================================
+with st.sidebar:
+    st.markdown("### Selecione o Torneio / Competição:")
+    torneio_sel = st.selectbox(
+        "", ["ATP Singles", "ATP Doubles", "Challenger Tour"]
+    )
+
+    st.markdown("---")
+    st.markdown("### 💰 Banca & Gestão")
+    valor_banca = st.number_input(
+        "Valor da Banca (€)", min_value=1.0, value=100.0, step=10.0
+    )
+    stake_max = st.slider("Stake Máxima Base (%)", 0.5, 10.0, 5.0)
+
+    st.markdown("---")
+    st.markdown("### ✏️ Inserção Manual de Odds")
+    casa_apostas = st.text_input("Casa de Apostas", "Betclic / PinUp")
+
+    st.markdown("**🏆 Vencedor do Encontro**")
+    odd_jogador_casa = st.number_input(f"Odd — {jogador_casa}", 1.01, 50.0, 1.45, key="odd_casa")
+    odd_jogador_fora = st.number_input(f"Odd — {jogador_fora}", 1.01, 50.0, 2.70, key="odd_fora")
+
+    st.markdown("**🎮 Total de Jogos**")
+    linha_jogos = st.number_input(
+        "Linha (ex: 21.5) — copia o valor exato da casa de apostas",
+        min_value=10.0, max_value=40.0, value=21.5, step=0.5,
+    )
+    odd_over_jogos = st.number_input(f"Odd Over {linha_jogos}", 1.01, 10.0, 1.85)
+    odd_under_jogos = st.number_input(f"Odd Under {linha_jogos}", 1.01, 10.0, 1.90)
+
+# ==========================================
+# CABEÇALHO E ABAS PRINCIPAIS
+# ==========================================
+st.markdown(
+    "## 🎾 Análise 26/27 - Rigor Estatístico & Inteligência Avançada"
+)
+
+aba_analise, aba_historico = st.tabs(
+    ["🎾 Análise do Jogo", "📊 Histórico & Desempenho"]
+)
+
+
 
 # ==========================================
 # ABA 1: ANÁLISE DO JOGO (Indicadores de Ténis)
@@ -436,19 +446,19 @@ with aba_analise:
         {
             "Mercado": f"Vitória {jogador_casa}",
             "Probabilidade": "64.5%",
-            "Odd Inserida": odd_favorito,
+            "Odd Inserida": odd_jogador_casa,
             "Odd Justa": round(1 / 0.645, 2),
             "Edge (%)": "+6.2%",
             "Stake Recomendada (€)": round(
                 valor_banca * (stake_max / 100), 2
             ),
             "Ganho Potencial (€)": round(
-                valor_banca * (stake_max / 100) * odd_favorito, 2
+                valor_banca * (stake_max / 100) * odd_jogador_casa, 2
             ),
             "Avaliação": "🔥 Valor Encontrado",
         },
         {
-            "Mercado": "Over 21.5 Jogos",
+            "Mercado": f"Over {linha_jogos} Jogos",
             "Probabilidade": "57.0%",
             "Odd Inserida": odd_over_jogos,
             "Odd Justa": round(1 / 0.57, 2),
@@ -462,7 +472,7 @@ with aba_analise:
             "Avaliação": "🔥 Valor Encontrado",
         },
         {
-            "Mercado": "Under 21.5 Jogos",
+            "Mercado": f"Under {linha_jogos} Jogos",
             "Probabilidade": "43.0%",
             "Odd Inserida": odd_under_jogos,
             "Odd Justa": round(1 / 0.43, 2),
@@ -474,7 +484,7 @@ with aba_analise:
         {
             "Mercado": f"Vitória {jogador_fora}",
             "Probabilidade": "35.5%",
-            "Odd Inserida": odd_underdog,
+            "Odd Inserida": odd_jogador_fora,
             "Odd Justa": round(1 / 0.355, 2),
             "Edge (%)": "-4.1%",
             "Stake Recomendada (€)": 0.00,
