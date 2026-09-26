@@ -107,12 +107,25 @@ SACKMANN_ANOS = [2022, 2023, 2024, 2025, 2026]
 
 @st.cache_data(ttl=21600)  # atualiza a cada 6 horas
 def obter_historico_sackmann(circuito, ano):
-    """circuito: 'atp' ou 'wta'. Devolve (dataframe, aviso)."""
+    """circuito: 'atp' ou 'wta'. Devolve (dataframe, aviso).
+
+    Importante: usamos requests com um User-Agent explícito em vez de
+    pd.read_csv(url) direto — o GitHub por vezes recusa pedidos que não se
+    identifiquem como vindo de um browser, mesmo que o ficheiro exista."""
+    import io
+
     repo = "tennis_atp" if circuito == "atp" else "tennis_wta"
     prefixo = "atp" if circuito == "atp" else "wta"
     url = f"https://raw.githubusercontent.com/JeffSackmann/{repo}/master/{prefixo}_matches_{ano}.csv"
     try:
-        df = pd.read_csv(url)
+        resp = requests.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; AnaliseDesportivaApp/1.0)"},
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            return None, f"{ano}: HTTP {resp.status_code}."
+        df = pd.read_csv(io.StringIO(resp.text))
         if {"winner_name", "loser_name"}.issubset(df.columns):
             return df, None
         return None, f"{ano}: ficheiro sem as colunas esperadas."
