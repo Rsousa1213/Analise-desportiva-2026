@@ -4,6 +4,7 @@ import os
 import sqlite3
 import numpy as np
 import pandas as pd
+import requests
 import streamlit as st
 
 # 1. Configuração da Página e Tema Escuro
@@ -91,6 +92,55 @@ st.markdown(
 # 2. Configuração da Base de Dados SQLite
 DB_NAME = "tenis_analytics.db"
 
+# Valores-placeholder para jogadores que ainda não têm estatísticas próprias
+# (vêm da ESPN só com o nome). Ficam claramente marcados como não-reais até
+# o próximo passo (Elo por superfície) os substituir por números calculados
+# a partir de histórico real.
+STATS_PLACEHOLDER = (80.0, 7.0, 2.5, 40.0, 75.0)
+
+
+# --- Passo atual: ir buscar a lista de jogadores ativos à API pública da ESPN ---
+@st.cache_data(ttl=21600)  # atualiza a cada 6 horas — não há motivo para ir mais vezes
+def obter_jogadores_espn(liga_slug, limite=300):
+    """Tenta obter os nomes dos jogadores ativos (ATP ou WTA) da API pública
+    e gratuita da ESPN. Devolve (lista_de_nomes, aviso). Se a API só devolver
+    referências ($ref) em vez dos nomes diretamente, devolve lista vazia e
+    um aviso explicativo, em vez de fazer centenas de pedidos extra (lento
+    e arriscado de ser bloqueado)."""
+    try:
+        r = requests.get(
+            f"https://sports.core.api.espn.com/v2/sports/tennis/leagues/{liga_slug}/athletes",
+            params={"limit": limite},
+            timeout=10,
+        )
+        if r.status_code != 200:
+            return [], f"A ESPN devolveu o código {r.status_code}."
+        data = r.json()
+        itens = data.get("items", [])
+        if not itens:
+            return [], "A resposta da ESPN veio sem jogadores (lista vazia)."
+
+        nomes = []
+        so_referencias = 0
+        for item in itens:
+            nome = item.get("displayName") or item.get("fullName")
+            if nome:
+                nomes.append(nome)
+            elif "$ref" in item:
+                so_referencias += 1
+
+        if nomes:
+            return sorted(nomes), None
+        if so_referencias:
+            return [], (
+                f"A ESPN devolveu {so_referencias} jogadores só como referências "
+                "(sem nome direto) — precisaria de um pedido extra por jogador, "
+                "o que seria demasiado lento. A usar a lista de reserva."
+            )
+        return [], "Formato de resposta inesperado da ESPN."
+    except Exception as e:
+        return [], f"Falha a contactar a ESPN: {e}"
+
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -123,12 +173,11 @@ def init_db():
     """
     )
 
-    # Lista abrangente com jogadores do circuito (incluindo Cerundolo e Davidovich Fokina)
+    # Lista de reserva (usada se a ligação à ESPN falhar) — os números aqui
+    # continuam a ser estimativas, não estatísticas oficiais verificadas.
     atletas_iniciais = [
-        # Destaques / Atuais
         ("Juan Manuel Cerundolo", 79.5, 5.2, 2.1, 41.0, 78.0),
         ("Alejandro Davidovich Fokina", 81.2, 8.4, 2.7, 42.5, 80.5),
-        # ATP Singles (Top Principal)
         ("Jannik Sinner", 87.5, 9.8, 1.8, 44.2, 85.0),
         ("Carlos Alcaraz", 85.2, 7.5, 2.4, 43.0, 83.5),
         ("Alexander Zverev", 89.1, 11.2, 2.1, 38.0, 81.0),
@@ -154,7 +203,7 @@ def init_db():
         ("Jack Draper", 85.0, 11.0, 2.0, 40.5, 82.0),
         ("Felix Auger-Aliassime", 86.5, 12.5, 2.5, 36.0, 81.0),
         ("Jordan Thompson", 81.2, 6.5, 1.8, 41.0, 78.5),
-        # ATP Doubles
+        # ATP Doubles (a ESPN não separa bem duplas — mantido manual por agora)
         ("Marcel Granollers", 90.0, 4.0, 1.2, 48.0, 85.0),
         ("Horacio Zeballos", 89.5, 4.2, 1.3, 47.5, 84.5),
         ("Matthew Ebden", 90.5, 6.5, 1.4, 46.0, 86.0),
@@ -185,7 +234,37 @@ def init_db():
     conn.close()
 
 
+def sincronizar_jogadores_espn():
+    """Junta à base de dados qualquer jogador da ESPN que ainda não exista,
+    com estatísticas-placeholder (claramente marcadas, não inventadas como
+    se fossem reais) até termos o Elo por superfície a sério."""
+    nomes_atp, aviso_atp = obter_jogadores_espn("atp")
+    nomes_wta, aviso_wta = obter_jogadores_espn("wta")
+
+    novos = sorted(set(nomes_atp) | set(nomes_wta))
+    if novos:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.executemany(
+            "INSERT OR IGNORE INTO atletas VALUES (?, ?, ?, ?, ?, ?)",
+            [(nome,) + STATS_PLACEHOLDER for nome in novos],
+        )
+        conn.commit()
+        conn.close()
+
+    return len(novos), aviso_atp, aviso_wta
+
+
 init_db()
+n_novos, aviso_atp, aviso_wta = sincronizar_jogadores_espn()
+
+with st.sidebar:
+    if n_novos > 0:
+        st.success(f"✅ {n_novos} jogadores atualizados a partir da ESPN.")
+    if aviso_atp:
+        st.warning(f"ATP: {aviso_atp}")
+    if aviso_wta:
+        st.warning(f"WTA: {aviso_wta}")
 
 
 # Função para obter as estatísticas do atleta selecionado
@@ -258,6 +337,8 @@ df_atletas_db = pd.read_sql_query(
 )
 conn.close()
 lista_tenistas = df_atletas_db["nome"].tolist()
+
+st.caption(f"📋 {len(lista_tenistas)} jogadores disponíveis na lista.")
 
 # Seleção de Atletas com lista completa integrada
 col_j1, col_j2 = st.columns(2)
@@ -345,6 +426,11 @@ with aba_analise:
 
     st.markdown("---")
     st.markdown("### 💡 Tabela Consolidada de Mercados (Ténis)")
+    st.caption(
+        "⚠️ Os valores desta tabela ainda estão fixos no código (não reagem aos "
+        "jogadores escolhidos) — é o próximo passo a corrigir, com o Elo por "
+        "superfície."
+    )
 
     dados_tabela = [
         {
