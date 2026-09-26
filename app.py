@@ -99,47 +99,41 @@ DB_NAME = "tenis_analytics.db"
 STATS_PLACEHOLDER = (80.0, 7.0, 2.5, 40.0, 75.0)
 
 
-# --- Passo atual: ir buscar a lista de jogadores ativos à API pública da ESPN ---
-@st.cache_data(ttl=21600)  # atualiza a cada 6 horas — não há motivo para ir mais vezes
-def obter_jogadores_espn(liga_slug, limite=300):
-    """Tenta obter os nomes dos jogadores ativos (ATP ou WTA) da API pública
-    e gratuita da ESPN. Devolve (lista_de_nomes, aviso). Se a API só devolver
-    referências ($ref) em vez dos nomes diretamente, devolve lista vazia e
-    um aviso explicativo, em vez de fazer centenas de pedidos extra (lento
-    e arriscado de ser bloqueado)."""
+# --- Passo atual: histórico real do Jeff Sackmann (GitHub) ---
+# Dá-nos nomes de jogadores que realmente disputaram partidas (não uma
+# lista escrita à mão) e, mais tarde, o histórico para calcular o Elo.
+SACKMANN_ANOS = [2022, 2023, 2024, 2025, 2026]
+
+
+@st.cache_data(ttl=21600)  # atualiza a cada 6 horas
+def obter_historico_sackmann(circuito, ano):
+    """circuito: 'atp' ou 'wta'. Devolve (dataframe, aviso)."""
+    repo = "tennis_atp" if circuito == "atp" else "tennis_wta"
+    prefixo = "atp" if circuito == "atp" else "wta"
+    url = f"https://raw.githubusercontent.com/JeffSackmann/{repo}/master/{prefixo}_matches_{ano}.csv"
     try:
-        r = requests.get(
-            f"https://sports.core.api.espn.com/v2/sports/tennis/leagues/{liga_slug}/athletes",
-            params={"limit": limite},
-            timeout=10,
-        )
-        if r.status_code != 200:
-            return [], f"A ESPN devolveu o código {r.status_code}."
-        data = r.json()
-        itens = data.get("items", [])
-        if not itens:
-            return [], "A resposta da ESPN veio sem jogadores (lista vazia)."
-
-        nomes = []
-        so_referencias = 0
-        for item in itens:
-            nome = item.get("displayName") or item.get("fullName")
-            if nome:
-                nomes.append(nome)
-            elif "$ref" in item:
-                so_referencias += 1
-
-        if nomes:
-            return sorted(nomes), None
-        if so_referencias:
-            return [], (
-                f"A ESPN devolveu {so_referencias} jogadores só como referências "
-                "(sem nome direto) — precisaria de um pedido extra por jogador, "
-                "o que seria demasiado lento. A usar a lista de reserva."
-            )
-        return [], "Formato de resposta inesperado da ESPN."
+        df = pd.read_csv(url)
+        if {"winner_name", "loser_name"}.issubset(df.columns):
+            return df, None
+        return None, f"{ano}: ficheiro sem as colunas esperadas."
     except Exception as e:
-        return [], f"Falha a contactar a ESPN: {e}"
+        return None, f"{ano}: não disponível ({e.__class__.__name__})."
+
+
+@st.cache_data(ttl=21600)
+def obter_jogadores_sackmann(circuito):
+    """Junta vários anos e devolve (lista_de_nomes, resumo_por_ano)."""
+    nomes = set()
+    resumo = []
+    for ano in SACKMANN_ANOS:
+        df, aviso = obter_historico_sackmann(circuito, ano)
+        if df is not None:
+            nomes.update(df["winner_name"].dropna().unique())
+            nomes.update(df["loser_name"].dropna().unique())
+            resumo.append(f"{ano}: ✅ {len(df)} jogos")
+        else:
+            resumo.append(f"{ano}: ❌ {aviso}")
+    return sorted(nomes), resumo
 
 
 def init_db():
@@ -234,12 +228,12 @@ def init_db():
     conn.close()
 
 
-def sincronizar_jogadores_espn():
-    """Junta à base de dados qualquer jogador da ESPN que ainda não exista,
-    com estatísticas-placeholder (claramente marcadas, não inventadas como
-    se fossem reais) até termos o Elo por superfície a sério."""
-    nomes_atp, aviso_atp = obter_jogadores_espn("atp")
-    nomes_wta, aviso_wta = obter_jogadores_espn("wta")
+def sincronizar_jogadores_sackmann():
+    """Junta à base de dados qualquer jogador do histórico Sackmann que ainda
+    não exista, com estatísticas-placeholder (claramente marcadas, não
+    inventadas como se fossem reais) até termos o Elo por superfície a sério."""
+    nomes_atp, resumo_atp = obter_jogadores_sackmann("atp")
+    nomes_wta, resumo_wta = obter_jogadores_sackmann("wta")
 
     novos = sorted(set(nomes_atp) | set(nomes_wta))
     if novos:
@@ -252,19 +246,22 @@ def sincronizar_jogadores_espn():
         conn.commit()
         conn.close()
 
-    return len(novos), aviso_atp, aviso_wta
+    return len(novos), resumo_atp, resumo_wta
 
 
 init_db()
-n_novos, aviso_atp, aviso_wta = sincronizar_jogadores_espn()
+n_novos, resumo_atp, resumo_wta = sincronizar_jogadores_sackmann()
 
 with st.sidebar:
     if n_novos > 0:
-        st.success(f"✅ {n_novos} jogadores atualizados a partir da ESPN.")
-    if aviso_atp:
-        st.warning(f"ATP: {aviso_atp}")
-    if aviso_wta:
-        st.warning(f"WTA: {aviso_wta}")
+        st.success(f"✅ {n_novos} jogadores reais (histórico Sackmann) adicionados.")
+    with st.expander("Detalhe da ligação ao histórico (ATP/WTA)"):
+        st.write("**ATP:**")
+        for linha in resumo_atp:
+            st.caption(linha)
+        st.write("**WTA:**")
+        for linha in resumo_wta:
+            st.caption(linha)
 
 
 # Função para obter as estatísticas do atleta selecionado
