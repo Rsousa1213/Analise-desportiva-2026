@@ -102,7 +102,7 @@ STATS_PLACEHOLDER = (80.0, 7.0, 2.5, 40.0, 75.0)
 # --- Passo atual: histórico real do Jeff Sackmann (GitHub) ---
 # Dá-nos nomes de jogadores que realmente disputaram partidas (não uma
 # lista escrita à mão) e, mais tarde, o histórico para calcular o Elo.
-SACKMANN_ANOS = [2022, 2023, 2024, 2025, 2026]
+SACKMANN_ANOS = [2006, 2022, 2023, 2024, 2025, 2026]  # 2006 é um "ano de controlo" — sabemos que este existe, serve para diagnóstico
 
 
 @st.cache_data(ttl=21600)  # atualiza a cada 6 horas
