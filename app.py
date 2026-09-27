@@ -116,21 +116,35 @@ def obter_historico_sackmann(circuito, ano):
 
     repo = "tennis_atp" if circuito == "atp" else "tennis_wta"
     prefixo = "atp" if circuito == "atp" else "wta"
-    url = f"https://raw.githubusercontent.com/JeffSackmann/{repo}/master/{prefixo}_matches_{ano}.csv"
-    try:
-        resp = requests.get(
-            url,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; AnaliseDesportivaApp/1.0)"},
-            timeout=15,
-        )
-        if resp.status_code != 200:
-            return None, f"{ano}: HTTP {resp.status_code}."
-        df = pd.read_csv(io.StringIO(resp.text))
-        if {"winner_name", "loser_name"}.issubset(df.columns):
-            return df, None
-        return None, f"{ano}: ficheiro sem as colunas esperadas."
-    except Exception as e:
-        return None, f"{ano}: não disponível ({e.__class__.__name__})."
+
+    # Duas fontes para o mesmo ficheiro: GitHub direto, e jsDelivr (uma CDN
+    # gratuita que espelha repositórios GitHub a partir de outro domínio).
+    # Se o GitHub estiver bloqueado na infraestrutura do Streamlit Cloud,
+    # a jsDelivr costuma continuar acessível, por ser um domínio diferente.
+    urls = [
+        ("GitHub direto", f"https://raw.githubusercontent.com/JeffSackmann/{repo}/master/{prefixo}_matches_{ano}.csv"),
+        ("jsDelivr (CDN)", f"https://cdn.jsdelivr.net/gh/JeffSackmann/{repo}@master/{prefixo}_matches_{ano}.csv"),
+    ]
+
+    erros = []
+    for nome_fonte, url in urls:
+        try:
+            resp = requests.get(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; AnaliseDesportivaApp/1.0)"},
+                timeout=15,
+            )
+            if resp.status_code != 200:
+                erros.append(f"{nome_fonte}: HTTP {resp.status_code}")
+                continue
+            df = pd.read_csv(io.StringIO(resp.text))
+            if {"winner_name", "loser_name"}.issubset(df.columns):
+                return df, None
+            erros.append(f"{nome_fonte}: ficheiro sem as colunas esperadas")
+        except Exception as e:
+            erros.append(f"{nome_fonte}: {e.__class__.__name__}")
+
+    return None, f"{ano}: " + " | ".join(erros)
 
 
 @st.cache_data(ttl=21600)
