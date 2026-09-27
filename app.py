@@ -114,17 +114,23 @@ def obter_historico_sackmann(circuito, ano):
     identifiquem como vindo de um browser, mesmo que o ficheiro exista."""
     import io
 
-    repo = "tennis_atp" if circuito == "atp" else "tennis_wta"
-    prefixo = "atp" if circuito == "atp" else "wta"
-
-    # Duas fontes para o mesmo ficheiro: GitHub direto, e jsDelivr (uma CDN
-    # gratuita que espelha repositórios GitHub a partir de outro domínio).
-    # Se o GitHub estiver bloqueado na infraestrutura do Streamlit Cloud,
-    # a jsDelivr costuma continuar acessível, por ser um domínio diferente.
-    urls = [
-        ("GitHub direto", f"https://raw.githubusercontent.com/JeffSackmann/{repo}/master/{prefixo}_matches_{ano}.csv"),
-        ("jsDelivr (CDN)", f"https://cdn.jsdelivr.net/gh/JeffSackmann/{repo}@master/{prefixo}_matches_{ano}.csv"),
-    ]
+    # Causa raiz encontrada: o caminho curto ".../master/ficheiro.csv" deixou
+    # de ser fiável no GitHub — o próprio botão "Raw" do GitHub gera agora
+    # links no formato ".../refs/heads/master/ficheiro.csv". Corrigido abaixo.
+    #
+    # Para ATP usamos o Tennismylife/TML-Database (dados até 2026, mesmas
+    # colunas do Sackmann, mais ativamente atualizado). Para WTA mantemos o
+    # Sackmann original, agora com o caminho correto.
+    if circuito == "atp":
+        urls = [
+            ("Tennismylife (GitHub)", f"https://raw.githubusercontent.com/Tennismylife/TML-Database/refs/heads/master/{ano}.csv"),
+            ("Tennismylife (jsDelivr)", f"https://cdn.jsdelivr.net/gh/Tennismylife/TML-Database@master/{ano}.csv"),
+        ]
+    else:
+        urls = [
+            ("Sackmann WTA (GitHub)", f"https://raw.githubusercontent.com/JeffSackmann/tennis_wta/refs/heads/master/wta_matches_{ano}.csv"),
+            ("Sackmann WTA (jsDelivr)", f"https://cdn.jsdelivr.net/gh/JeffSackmann/tennis_wta@master/wta_matches_{ano}.csv"),
+        ]
 
     erros = []
     for nome_fonte, url in urls:
